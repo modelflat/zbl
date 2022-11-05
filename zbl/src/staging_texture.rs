@@ -49,6 +49,8 @@ impl StagingTexture {
         let mapped_texture =
             unsafe { context.Map(Some(&staging_texture_ptr), 0, D3D11_MAP_READ, 0)? };
         // we can instantly unmap because the texture is staging, and will be still accessible by CPU
+        // TODO there should be a way to do this by queueing a fence (we only need to wait copies) or something like that,
+        // which would probably be more correct solution rather than map-unmap
         unsafe {
             context.Unmap(Some(&staging_texture_ptr), 0);
         };

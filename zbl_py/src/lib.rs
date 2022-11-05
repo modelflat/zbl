@@ -1,3 +1,4 @@
+use ::zbl::windows::Win32::Foundation::HWND;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use std::ffi::c_void;
 
@@ -9,6 +10,8 @@ pub enum Error {
     WindowsError(#[from] ::zbl::windows::core::Error),
     #[error("frame channel error")]
     FrameChannelError(#[from] std::sync::mpsc::RecvError),
+    #[error("neither name nor handle is set")]
+    NeitherNameNorHandleIsSet,
 }
 
 impl From<Error> for PyErr {
@@ -56,13 +59,17 @@ pub struct Capture {
 }
 
 impl Capture {
-    pub fn from_window_name(name: &str) -> Result<Self> {
-        ::zbl::ro_initialize_once();
-        ::zbl::set_dpi_aware();
-        let window = ::zbl::Window::find_first(name)
-            .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
+    pub fn from_window(window: ::zbl::Window) -> Result<Self> {
+        // TODO expose as python api, call on module loaded?
+        ::zbl::init();
         let capture = ::zbl::Capture::new(window)?;
         Ok(Self { inner: capture })
+    }
+
+    pub fn from_window_name(name: &str) -> Result<Self> {
+        let window = ::zbl::Window::find_first(name)
+            .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
+        Ok(Self::from_window(window)?)
     }
 
     fn _start(&self) -> Result<()> {
@@ -82,7 +89,7 @@ impl Capture {
         }
     }
 
-    fn _stop(&self) -> Result<()> {
+    fn _stop(&mut self) -> Result<()> {
         Ok(self.inner.stop()?)
     }
 }
@@ -90,8 +97,16 @@ impl Capture {
 #[pymethods]
 impl Capture {
     #[new]
-    pub fn new(name: &str) -> PyResult<Self> {
-        Ok(Self::from_window_name(name)?)
+    pub fn new(name: Option<&str>, handle: Option<i32>) -> PyResult<Self> {
+        if let Some(name) = name {
+            Ok(Self::from_window_name(name)?)
+        } else if let Some(handle) = handle {
+            Ok(Self::from_window(::zbl::Window::new(HWND(
+                handle as isize,
+            )))?)
+        } else {
+            Err(Error::NeitherNameNorHandleIsSet)?
+        }
     }
 
     #[getter]
@@ -112,7 +127,7 @@ impl Capture {
         Ok(self._grab()?)
     }
 
-    pub fn stop(&self) -> PyResult<()> {
+    pub fn stop(&mut self) -> PyResult<()> {
         Ok(self._stop()?)
     }
 }

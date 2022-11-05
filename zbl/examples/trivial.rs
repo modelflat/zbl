@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use opencv::{highgui, prelude::*};
-use zbl::{ro_initialize_once, Capture, Window};
+use zbl::{init, Capture, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -12,7 +12,7 @@ struct Args {
 }
 
 fn main() {
-    ro_initialize_once();
+    init();
 
     let args = Args::parse();
     let window = Window::find_first(&args.window).expect("failed to find window");

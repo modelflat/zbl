@@ -1,7 +1,7 @@
 import numpy
 import ctypes as C
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 
 from .zbl import Capture as _Capture, Frame
@@ -22,8 +22,8 @@ def frame_to_numpy_array(frame: Frame) -> numpy.ndarray:
 
 class Capture:
 
-    def __init__(self, window_name: str):
-        self._inner = _Capture(window_name)
+    def __init__(self, name: Optional[str] = None, handle: Optional[str] = None):
+        self._inner = _Capture(name, handle)
 
     @property
     def window(self) -> int:
@@ -58,8 +58,8 @@ def show(window_name: str):
 
     try:
         cv2.namedWindow('zbl', cv2.WINDOW_NORMAL)
-        
-        with Capture(window_name) as cap:
+
+        with Capture(name=window_name) as cap:
             t = perf_counter()
             last_print = perf_counter()
             t_total = 0

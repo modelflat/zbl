@@ -4,10 +4,12 @@ use windows::Win32::Foundation::{BOOL, HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Direct3D11::D3D11_BOX;
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWM_CLOAKED_SHELL};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
+use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop;
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetAncestor, GetClientRect, GetShellWindow, GetWindowLongW, GetWindowRect,
-    IsWindowVisible, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, WS_DISABLED, WS_EX_TOOLWINDOW, GetWindowThreadProcessId,
+    GetWindowThreadProcessId, IsWindowVisible, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, WS_DISABLED,
+    WS_EX_TOOLWINDOW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetWindowTextW};
 
@@ -98,6 +100,7 @@ impl Window {
         unsafe {
             if self.title.is_empty()
                 || self.handle == GetShellWindow()
+                || self.handle == GetConsoleWindow()
                 || IsWindowVisible(self.handle).as_bool() == false
                 || GetAncestor(self.handle, GA_ROOT) != self.handle
             {
@@ -154,23 +157,26 @@ impl Window {
     }
 
     pub fn get_client_box(&self) -> D3D11_BOX {
+        let mut window_rect = RECT::default();
+        let mut client_rect = RECT::default();
+        let mut top_left = POINT::default();
         unsafe {
-            let mut window_rect = RECT::default();
             GetWindowRect(self.handle, &mut window_rect as *mut _);
-            let mut top_left = POINT::default();
             ClientToScreen(self.handle, &mut top_left as *mut _);
-            let mut rect = RECT::default();
-            GetClientRect(self.handle, &mut rect as *mut _);
-
-            let mut client_box = D3D11_BOX::default();
-            // TODO why 1?
-            client_box.left = 1;
-            client_box.right = client_box.left + (rect.right - rect.left) as u32;
-            client_box.top = (top_left.y - window_rect.top) as u32;
-            client_box.bottom = client_box.top + (rect.bottom - rect.top) as u32;
-            client_box.front = 0;
-            client_box.back = 1;
-            client_box
+            GetClientRect(self.handle, &mut client_rect as *mut _);
         }
+
+        let mut client_box = D3D11_BOX::default();
+        // TODO
+        // 1 seems to work because most window have a 1-pixel gap in the D3D11 texture
+        // produced by Windows.Graphics.Capture. Why tho?
+        client_box.left = 1;
+        client_box.right = client_box.left + (client_rect.right - client_rect.left) as u32;
+        // TODO there seems to be no reliadble way of getting the taskbar height, so this code is fairly brittle
+        client_box.top = (top_left.y - window_rect.top) as u32;
+        client_box.bottom = client_box.top + (client_rect.bottom - client_rect.top) as u32;
+        client_box.front = 0;
+        client_box.back = 1;
+        client_box
     }
 }

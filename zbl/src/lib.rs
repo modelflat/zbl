@@ -15,6 +15,11 @@ use windows::Win32::{
     UI::HiDpi::{SetProcessDpiAwareness, PROCESS_SYSTEM_DPI_AWARE},
 };
 
+pub fn init() {
+    ro_initialize_once();
+    set_dpi_aware();
+}
+
 pub fn ro_initialize_once() {
     static mut STATE: AtomicBool = AtomicBool::new(false);
     unsafe {

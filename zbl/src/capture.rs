@@ -35,7 +35,7 @@ use crate::{
 };
 
 lazy_static! {
-    static ref OBJECT_DESTROYED_USER_DATA: RwLock<HashMap<isize, (HWND, SyncSender<()>)>> =
+    static ref OBJECT_DESTROYED_USER_DATA: RwLock<HashMap<isize, (isize, SyncSender<()>)>> =
         Default::default();
 }
 
@@ -51,7 +51,7 @@ extern "system" fn object_destroyed_cb(
     if id_object == 0 && id_child == 0 && handle != HWND::default() {
         let has_been_closed = if let Ok(handles) = OBJECT_DESTROYED_USER_DATA.read() {
             if let Some((window_handle, tx)) = handles.get(&this.0) {
-                if *window_handle == handle {
+                if *window_handle == handle.0 {
                     tx.send(()).ok();
                     true
                 } else {
@@ -85,9 +85,14 @@ pub struct Capture {
     #[allow(unused)]
     staging_texture_ptr: Option<D3D11_MAPPED_SUBRESOURCE>,
     content_size: SizeInt32,
+    stopped: bool,
 }
 
 impl Capture {
+    /// Create a new capture of `window`. This will initialize D3D11 devices, context, and Windows.Graphics.Capture's
+    /// frame pool / capture session.
+    ///
+    /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
     pub fn new(window: Window) -> Result<Self> {
         let d3d_device = create_d3d_device()?;
         let d3d_context = {
@@ -117,13 +122,17 @@ impl Capture {
                 EVENT_OBJECT_DESTROY,
                 None,
                 Some(object_destroyed_cb),
-                window.get_process_id(),
+                // TODO filtering by process id does not always catch the moment when the window is closed
+                // why? aren't windows bound to their process ids?
+                // moreover, for explorer windows even that does not work.
+                // need some more realiable and simpler way to track window closing
+                0,
                 0,
                 WINEVENT_OUTOFCONTEXT,
             )
         };
         if let Ok(mut handles) = OBJECT_DESTROYED_USER_DATA.write() {
-            handles.insert(hook_id.0, (window.handle, sender));
+            handles.insert(hook_id.0, (window.handle.0, sender));
         }
 
         let (sender, receiver) = sync_channel(1 << 5);
@@ -163,21 +172,32 @@ impl Capture {
             staging_texture: None,
             staging_texture_ptr: None,
             content_size: Default::default(),
+            stopped: false,
         })
     }
 
+    /// Get attached window.
     pub fn window(&self) -> &Window {
         &self.window
     }
 
+    /// Start capturing frames.
     pub fn start(&self) -> Result<()> {
         self.session.StartCapture()
     }
 
+    /// Grab current capture frame.
+    ///
+    /// **This method blocks if there is no frames in the frame pool** (happens when application's window
+    /// is minimized, for example).
+    ///
+    /// Returns:
+    /// * `Ok(Some(...))` if there is a frame and it's been successfully captured;
+    /// * `Ok(None)` if no frames can be received from the application (i.e. when the window was closed).
+    /// * `Err(...)` if an error has occured while capturing a frame.
     pub fn grab(&mut self) -> Result<Option<(&StagingTexture, D3D11_MAPPED_SUBRESOURCE)>> {
         if self.grab_next()? {
             let texture = self.staging_texture.as_ref().unwrap();
-            // let ptr = self.staging_texture_ptr.as_ref().unwrap();
             let ptr = self
                 .staging_texture
                 .as_ref()
@@ -189,7 +209,12 @@ impl Capture {
         }
     }
 
-    pub fn stop(&self) -> Result<()> {
+    /// Stops the capture.
+    ///
+    /// This `Capture` instance cannot be reused after that (i.e. calling `start()` again will
+    /// **not** produce more frames).
+    pub fn stop(&mut self) -> Result<()> {
+        self.stopped = true;
         self.session.Close()?;
         self.frame_pool.Close()?;
         Ok(())
@@ -209,6 +234,9 @@ impl Capture {
     }
 
     fn grab_next(&mut self) -> Result<bool> {
+        if self.stopped {
+            return Ok(false);
+        }
         let frame = loop {
             match self.frame_source.try_recv() {
                 Ok(Some(f)) => break f,
@@ -241,8 +269,6 @@ impl Capture {
                 self.window_box.bottom - self.window_box.top,
                 desc.Format,
             )?;
-            // TODO is it safe to map only once considering that CopySubresourceRegion is async?
-            // self.staging_texture_ptr = Some(new_staging_texture.as_mapped(&self.context)?);
             self.staging_texture = Some(new_staging_texture);
             self.content_size = content_size;
         }
@@ -261,6 +287,9 @@ impl Capture {
                 Some(&self.window_box as *const _),
             );
         }
+
+        // TODO queue a fence here? currently we ensure buffer is copied by map-unmap texture outside of this method,
+        // which is probably not the best way to do this
 
         Ok(true)
     }
