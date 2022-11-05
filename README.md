@@ -7,7 +7,7 @@ and makes it easy to integrate CV libraries (such as OpenCV) with desktop apps.
 
 ## Installation
 
-TODO
+Download and install suitable wheel from [releases page](https://github.com/modelflat/zbl/releases).
 
 ## Usage
 
