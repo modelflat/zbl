@@ -1,0 +1,16 @@
+[package]
+name = "zbl_py"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "zbl"
+crate-type = ["cdylib"]
+
+[dependencies]
+zbl = { path = "../zbl" }
+thiserror = "1"
+
+[dependencies.pyo3]
+version = "0.17"
+features = ["extension-module"]
