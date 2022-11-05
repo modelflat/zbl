@@ -5,11 +5,16 @@ build-backend = "maturin"
 [project]
 name = "zbl"
 version = "0.0.1"
-license = "MIT"
+license = { file = "../LICENSE.txt" }
 requires-python = ">=3.7"
 dependencies = ["numpy"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
     "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+[project.optional-dependencies]
+example = [
+    "opencv-python~=4.6.0"
 ]
