@@ -1,6 +1,6 @@
 # zbl
 
-zbl is a Rust and Python library which provides a very simple interface for Microsoft's `Windows.Graphics.Capture` API
+`zbl` is a Rust and Python library which provides a very simple interface for Microsoft's `Windows.Graphics.Capture` API
 and makes it easy to integrate CV libraries (such as OpenCV) with desktop apps.
 
 **This library is not well-tested against corner cases, and was only verified to work for a 'happy path' scenarios, so beware of bugs!**
@@ -30,3 +30,8 @@ To run an example using OpenCV's `highgui`:
 
 See [examples](https://github.com/modelflat/zbl/tree/master/zbl/examples).
 Note: if you are getting OpenCV build errors when building the example, check out [how to build OpenCV rust bindings](https://github.com/twistedfall/opencv-rust#rust-opencv-bindings).
+
+
+## Credits
+
+`zbl` is heavily inspired by [screenshot-rs](https://github.com/robmikh/screenshot-rs).
