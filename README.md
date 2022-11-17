@@ -1,5 +1,7 @@
 # zbl
 
+[![PyPI version](https://badge.fury.io/py/zbl.svg)](https://badge.fury.io/py/zbl)
+
 `zbl` is a Rust and Python library which aims to make it easy to integrate CV libraries (such as OpenCV) with
 Windows Desktop apps for real-time processing. It does so by providing a simplified interface to 
 `Windows.Graphics.Capture`.
@@ -36,6 +38,10 @@ To run an example using OpenCV's `highgui`:
 See [examples](https://github.com/modelflat/zbl/tree/master/zbl/examples).
 Note: if you are getting OpenCV build errors when building the example, check out [how to build OpenCV rust bindings](https://github.com/twistedfall/opencv-rust#rust-opencv-bindings).
 
+## Why not `mss` / `pyautogui`?
+
+Those are the definition of "slow" at the time of writing. `mss` tops at 30-50 fps in a tight loop, `pyautogui` is
+even slower than that. Due to GPU accel which comes with D3D11 and pointer sharing, `zbl` captures at 500-700 fps - an order of magnitude faster, which allows a lot more time for the actual processing.
 
 ## Credits
 
