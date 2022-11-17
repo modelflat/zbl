@@ -41,7 +41,7 @@ Note: if you are getting OpenCV build errors when building the example, check ou
 ## Why not `mss` / `pyautogui`?
 
 Those are the definition of "slow" at the time of writing. `mss` tops at 30-50 fps in a tight loop, `pyautogui` is
-even slower than that. Due to GPU accel which comes with D3D11 and pointer sharing, `zbl` captures at 500-700 fps - an order of magnitude faster, which allows a lot more time for the actual processing.
+even slower than that. Due to GPU accel which comes with D3D11, `zbl` captures at 500-700 fps - an order of magnitude faster, which allows a lot more time for the actual processing.
 
 ## Credits
 
