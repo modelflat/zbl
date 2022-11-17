@@ -1,12 +1,10 @@
-[build-system]
-requires = ["maturin>=0.13,<0.14"]
-build-backend = "maturin"
-
 [project]
 name = "zbl"
-version = "0.0.1"
-license = { file = "../LICENSE.txt" }
+version = "0.0.3"
+readme = "../README.md"
 requires-python = ">=3.7"
+license = { file = "../LICENSE.txt" }
+keywords = ["windows", "d3d11", "window-capture", "graphics-capture", "cv"]
 dependencies = ["numpy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -18,3 +16,7 @@ classifiers = [
 example = [
     "opencv-python~=4.6.0"
 ]
+
+[build-system]
+requires = ["maturin>=0.13,<0.14"]
+build-backend = "maturin"
