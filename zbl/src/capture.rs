@@ -71,6 +71,11 @@ extern "system" fn object_destroyed_cb(
     }
 }
 
+pub struct Frame<'a> {
+    pub texture: &'a StagingTexture,
+    pub ptr: D3D11_MAPPED_SUBRESOURCE,
+}
+
 pub struct Capture {
     device: ID3D11Device,
     direct3d_device: IDirect3DDevice,
@@ -82,8 +87,6 @@ pub struct Capture {
     frame_source: Receiver<Option<Direct3D11CaptureFrame>>,
     session: GraphicsCaptureSession,
     staging_texture: Option<StagingTexture>,
-    #[allow(unused)]
-    staging_texture_ptr: Option<D3D11_MAPPED_SUBRESOURCE>,
     content_size: SizeInt32,
     stopped: bool,
 }
@@ -170,7 +173,6 @@ impl Capture {
             frame_source: receiver,
             session,
             staging_texture: None,
-            staging_texture_ptr: None,
             content_size: Default::default(),
             stopped: false,
         })
@@ -195,7 +197,7 @@ impl Capture {
     /// * `Ok(Some(...))` if there is a frame and it's been successfully captured;
     /// * `Ok(None)` if no frames can be received from the application (i.e. when the window was closed).
     /// * `Err(...)` if an error has occured while capturing a frame.
-    pub fn grab(&mut self) -> Result<Option<(&StagingTexture, D3D11_MAPPED_SUBRESOURCE)>> {
+    pub fn grab(&mut self) -> Result<Option<Frame>> {
         if self.grab_next()? {
             let texture = self.staging_texture.as_ref().unwrap();
             let ptr = self
@@ -203,7 +205,10 @@ impl Capture {
                 .as_ref()
                 .unwrap()
                 .as_mapped(&self.context)?;
-            Ok(Some((texture, ptr.clone())))
+            Ok(Some(Frame {
+                texture,
+                ptr: ptr.clone(),
+            }))
         } else {
             Ok(None)
         }

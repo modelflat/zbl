@@ -77,7 +77,7 @@ impl Capture {
     }
 
     fn _grab(&mut self) -> Result<Option<Frame>> {
-        if let Some((texture, ptr)) = self.inner.grab()? {
+        if let Some(::zbl::Frame { texture, ptr }) = self.inner.grab()? {
             Ok(Some(Frame {
                 width: texture.desc.Width,
                 height: texture.desc.Height,

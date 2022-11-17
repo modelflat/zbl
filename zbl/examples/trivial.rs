@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use opencv::{highgui, prelude::*};
-use zbl::{init, Capture, Window};
+use zbl::{init, Capture, Frame, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -28,7 +28,7 @@ fn main() {
     let mut tt = 0f32;
     loop {
         let t = Instant::now();
-        if let Some((texture, ptr)) = capturer.grab().expect("failed to get frame") {
+        if let Some(Frame { texture, ptr }) = capturer.grab().expect("failed to get frame") {
             let mat = unsafe {
                 Mat::new_size_with_data(
                     opencv::core::Size::new(texture.desc.Width as i32, texture.desc.Height as i32),

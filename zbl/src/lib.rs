@@ -3,7 +3,7 @@ pub mod staging_texture;
 pub mod util;
 pub mod window;
 
-pub use capture::Capture;
+pub use capture::{Capture, Frame};
 pub use window::Window;
 
 // re-export winapi
