@@ -26,7 +26,7 @@ pub fn create_d3d_device() -> Result<ID3D11Device> {
                 None,
                 D3D11_CREATE_DEVICE_BGRA_SUPPORT,
                 None,
-                D3D11_SDK_VERSION as u32,
+                D3D11_SDK_VERSION,
                 Some(&mut device as *mut _),
                 None,
                 None,

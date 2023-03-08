@@ -6,7 +6,7 @@ use windows::{
             D3D11_CPU_ACCESS_READ, D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ,
             D3D11_RESOURCE_MISC_FLAG, D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING,
         },
-        Dxgi::Common::DXGI_FORMAT,
+        Dxgi::Common::{DXGI_FORMAT, DXGI_SAMPLE_DESC},
     },
 };
 
@@ -23,17 +23,21 @@ impl StagingTexture {
         height: u32,
         format: DXGI_FORMAT,
     ) -> Result<Self> {
-        let mut desc = D3D11_TEXTURE2D_DESC::default();
-        desc.Width = width;
-        desc.Height = height;
-        desc.Format = format;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.SampleDesc.Count = 1;
-        desc.BindFlags = D3D11_BIND_FLAG(0);
-        desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG(0);
-        desc.Usage = D3D11_USAGE_STAGING;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: width,
+            Height: height,
+            Format: format,
+            MipLevels: 1,
+            ArraySize: 1,
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
+            BindFlags: D3D11_BIND_FLAG(0),
+            MiscFlags: D3D11_RESOURCE_MISC_FLAG(0),
+            Usage: D3D11_USAGE_STAGING,
+            CPUAccessFlags: D3D11_CPU_ACCESS_READ,
+        };
 
         let texture = unsafe { device.CreateTexture2D(&desc, None)? };
 

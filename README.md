@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/zbl.svg)](https://badge.fury.io/py/zbl)
 
-`zbl` is a Rust and Python library which aims to make it easy to integrate CV libraries (such as OpenCV) with
+`zbl` is a Rust and Python library aiming to make it easier to integrate OpenCV (and possibly other CV libraries) with
 Windows Desktop apps for real-time processing. It does so by providing a simplified interface to 
 `Windows.Graphics.Capture`.
 
@@ -42,6 +42,10 @@ Note: if you are getting OpenCV build errors when building the example, check ou
 
 Those are the definition of "slow" at the time of writing. `mss` tops at 30-50 fps in a tight loop, `pyautogui` is
 even slower than that. Due to GPU accel which comes with D3D11, `zbl` captures at 500-700 fps - an order of magnitude faster, which allows a lot more time for the actual processing.
+
+## Why Rust for the native code part and not C++ / C#?
+
+I need it for the Rust project, hence it is in Rust.
 
 ## Credits
 

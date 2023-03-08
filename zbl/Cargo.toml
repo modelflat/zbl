@@ -1,6 +1,6 @@
 [package]
 name = "zbl"
-version = "0.0.1"
+version = "0.0.4"
 edition = "2021"
 
 [lib]
@@ -36,4 +36,4 @@ features = [
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }
-opencv = "0.71"
+opencv = "0.77"

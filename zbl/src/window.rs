@@ -23,7 +23,7 @@ extern "system" fn enum_windows_cb(window: HWND, state: LPARAM) -> BOOL {
 }
 
 fn enumerate_capturable_windows() -> Vec<Window> {
-    let state = Box::into_raw(Box::new(Vec::new()));
+    let state = Box::into_raw(Box::default());
     *unsafe {
         EnumWindows(Some(enum_windows_cb), LPARAM(state as isize));
         Box::from_raw(state)
@@ -101,7 +101,7 @@ impl Window {
             if self.title.is_empty()
                 || self.handle == GetShellWindow()
                 || self.handle == GetConsoleWindow()
-                || IsWindowVisible(self.handle).as_bool() == false
+                || !IsWindowVisible(self.handle).as_bool()
                 || GetAncestor(self.handle, GA_ROOT) != self.handle
             {
                 return false;

@@ -69,7 +69,7 @@ impl Capture {
     pub fn from_window_name(name: &str) -> Result<Self> {
         let window = ::zbl::Window::find_first(name)
             .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
-        Ok(Self::from_window(window)?)
+        Self::from_window(window)
     }
 
     fn _start(&self) -> Result<()> {

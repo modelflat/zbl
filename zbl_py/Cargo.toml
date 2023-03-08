@@ -1,6 +1,6 @@
 [package]
 name = "zbl_py"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 
 [lib]
@@ -12,5 +12,5 @@ zbl = { path = "../zbl" }
 thiserror = "1"
 
 [dependencies.pyo3]
-version = "0.17"
+version = "0.18"
 features = ["extension-module"]

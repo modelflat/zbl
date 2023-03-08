@@ -205,10 +205,7 @@ impl Capture {
                 .as_ref()
                 .unwrap()
                 .as_mapped(&self.context)?;
-            Ok(Some(Frame {
-                texture,
-                ptr: ptr.clone(),
-            }))
+            Ok(Some(Frame { texture, ptr }))
         } else {
             Ok(None)
         }
