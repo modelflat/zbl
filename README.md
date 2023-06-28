@@ -21,7 +21,7 @@ Alternatively, you can install suitable wheel from [releases page](https://githu
 ```python
 from zbl import Capture
 
-with Capture('visual studio code') as cap:
+with Capture(window_name='visual studio code') as cap:
     frame = next(cap.frames())
     print(frame.shape)
 ```
@@ -31,7 +31,7 @@ The snippet above will capture a window which title contains the string `visual 
 To run an example using OpenCV's `highgui`:
 
 1. Install `opencv-python`
-2. Run `python -m zbl '<full or partial window name, case insensitive>'`
+2. Run `python -m zbl --window-name '<full or partial window name, case insensitive>'`
 
 ## Rust
 

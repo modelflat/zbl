@@ -1,17 +1,75 @@
-use windows::core::Result;
-use windows::Graphics::Capture::GraphicsCaptureItem;
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM, POINT, RECT};
-use windows::Win32::Graphics::Direct3D11::D3D11_BOX;
-use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWM_CLOAKED_SHELL};
-use windows::Win32::Graphics::Gdi::ClientToScreen;
-use windows::Win32::System::Console::GetConsoleWindow;
-use windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop;
-use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetAncestor, GetClientRect, GetShellWindow, GetWindowLongW, GetWindowRect,
-    GetWindowThreadProcessId, IsWindowVisible, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, WS_DISABLED,
-    WS_EX_TOOLWINDOW,
+use std::{
+    collections::HashMap,
+    sync::{
+        mpsc::{sync_channel, Receiver, SyncSender},
+        RwLock,
+    },
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetWindowTextW};
+
+use lazy_static::lazy_static;
+use windows::{
+    core::Result,
+    Graphics::Capture::GraphicsCaptureItem,
+    Win32::{
+        Foundation::{BOOL, HWND, LPARAM, POINT, RECT},
+        Graphics::{
+            Direct3D11::D3D11_BOX,
+            Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWM_CLOAKED_SHELL},
+            Gdi::ClientToScreen,
+        },
+        System::{
+            Console::GetConsoleWindow, WinRT::Graphics::Capture::IGraphicsCaptureItemInterop,
+        },
+        UI::{
+            Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK},
+            WindowsAndMessaging::{
+                EnumWindows, GetAncestor, GetClassNameW, GetClientRect, GetShellWindow,
+                GetWindowLongW, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId,
+                IsWindowVisible, EVENT_OBJECT_DESTROY, GA_ROOT, GWL_EXSTYLE, GWL_STYLE,
+                WINEVENT_OUTOFCONTEXT, WS_DISABLED, WS_EX_TOOLWINDOW,
+            },
+        },
+    },
+};
+
+use crate::{util::convert_u16_string, Capturable};
+
+lazy_static! {
+    static ref OBJECT_DESTROYED_USER_DATA: RwLock<HashMap<isize, (isize, SyncSender<()>)>> =
+        Default::default();
+}
+
+extern "system" fn object_destroyed_cb(
+    this: HWINEVENTHOOK,
+    _: u32,
+    handle: HWND,
+    id_object: i32,
+    id_child: i32,
+    _: u32,
+    _: u32,
+) {
+    if id_object == 0 && id_child == 0 && handle != HWND::default() {
+        let has_been_closed = if let Ok(handles) = OBJECT_DESTROYED_USER_DATA.read() {
+            if let Some((window_handle, tx)) = handles.get(&this.0) {
+                if *window_handle == handle.0 {
+                    tx.send(()).ok();
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            // TODO is that correct?
+            true
+        };
+
+        if has_been_closed {
+            unsafe { UnhookWinEvent(this) };
+        }
+    }
+}
 
 extern "system" fn enum_windows_cb(window: HWND, state: LPARAM) -> BOOL {
     let window_info = Window::new(window);
@@ -30,7 +88,7 @@ fn enumerate_capturable_windows() -> Vec<Window> {
     }
 }
 
-fn find_by_name(window_name: &str) -> Vec<Window> {
+fn find_window_by_name(window_name: &str) -> Vec<Window> {
     let mut found: Vec<Window> = Vec::new();
     let name_lower = window_name.to_lowercase();
     for window_info in enumerate_capturable_windows() {
@@ -41,12 +99,18 @@ fn find_by_name(window_name: &str) -> Vec<Window> {
     found
 }
 
-fn convert_u16_string(input: &[u16; 512]) -> String {
-    let mut s = String::from_utf16_lossy(input);
-    if let Some(index) = s.find('\0') {
-        s.truncate(index);
-    }
-    s
+fn get_window_text(handle: HWND) -> String {
+    let mut title = [0u16; 512];
+    // TODO: check errors
+    unsafe { GetWindowTextW(handle, &mut title) };
+    convert_u16_string(&title)
+}
+
+fn get_window_class_name(handle: HWND) -> String {
+    let mut class_name = [0u16; 512];
+    // TODO: check errors
+    unsafe { GetClassNameW(handle, &mut class_name) };
+    convert_u16_string(&class_name)
 }
 
 #[derive(Clone, Debug)]
@@ -58,20 +122,8 @@ pub struct Window {
 
 impl Window {
     pub fn new(handle: HWND) -> Self {
-        // TODO: check errors
-        let title = {
-            let mut title = [0u16; 512];
-            unsafe { GetWindowTextW(handle, &mut title) };
-            convert_u16_string(&title)
-        };
-
-        // TODO: check errors
-        let class_name = {
-            let mut class_name = [0u16; 512];
-            unsafe { GetClassNameW(handle, &mut class_name) };
-            convert_u16_string(&class_name)
-        };
-
+        let title = get_window_text(handle);
+        let class_name = get_window_class_name(handle);
         Self {
             handle,
             title,
@@ -80,7 +132,7 @@ impl Window {
     }
 
     pub fn find_first(window_name: &str) -> Option<Window> {
-        find_by_name(window_name).into_iter().next()
+        find_window_by_name(window_name).into_iter().next()
     }
 
     pub fn matches_title_and_class_name(&self, title: &str, class_name: &str) -> bool {
@@ -150,13 +202,15 @@ impl Window {
         unsafe { GetWindowThreadProcessId(self.handle, Some(&mut process_id as *mut _)) };
         process_id
     }
+}
 
-    pub fn create_capture_item(&self) -> Result<GraphicsCaptureItem> {
+impl Capturable for Window {
+    fn create_capture_item(&self) -> Result<GraphicsCaptureItem> {
         let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
         unsafe { interop.CreateForWindow(self.handle) }
     }
 
-    pub fn get_client_box(&self) -> D3D11_BOX {
+    fn get_client_box(&self) -> Result<D3D11_BOX> {
         let mut window_rect = RECT::default();
         let mut client_rect = RECT::default();
         let mut top_left = POINT::default();
@@ -177,6 +231,33 @@ impl Window {
         client_box.bottom = client_box.top + (client_rect.bottom - client_rect.top) as u32;
         client_box.front = 0;
         client_box.back = 1;
-        client_box
+        Ok(client_box)
+    }
+
+    fn get_close_notification_channel(&self) -> Receiver<()> {
+        let (sender, receiver) = sync_channel(1);
+        let hook_id = unsafe {
+            SetWinEventHook(
+                EVENT_OBJECT_DESTROY,
+                EVENT_OBJECT_DESTROY,
+                None,
+                Some(object_destroyed_cb),
+                // TODO filtering by process id does not always catch the moment when the window is closed
+                // why? aren't windows bound to their process ids?
+                // moreover, for explorer windows even that does not work.
+                // need some more realiable and simpler way to track window closing
+                0,
+                0,
+                WINEVENT_OUTOFCONTEXT,
+            )
+        };
+        if let Ok(mut handles) = OBJECT_DESTROYED_USER_DATA.write() {
+            handles.insert(hook_id.0, (self.handle.0, sender));
+        }
+        receiver
+    }
+
+    fn get_raw_handle(&self) -> isize {
+        self.handle.0
     }
 }

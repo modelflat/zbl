@@ -4,7 +4,7 @@ import ctypes as C
 from typing import Iterator, Optional
 
 
-from .zbl import Capture as _Capture, Frame
+from .zbl import Capture as _NativeCapture, Frame
 
 
 uint8_ptr = C.POINTER(C.c_uint8)
@@ -22,16 +22,18 @@ def frame_to_numpy_array(frame: Frame) -> numpy.ndarray:
 
 class Capture:
 
-    def __init__(self, name: Optional[str] = None, handle: Optional[str] = None):
-        self._inner = _Capture(name, handle)
+    def __init__(
+        self,
+        window_name: Optional[str] = None,
+        window_handle: Optional[str] = None,
+        display_id: Optional[int] = None,
+        capture_cursor: bool = False,
+    ):
+        self._inner = _NativeCapture(window_name, window_handle, display_id, capture_cursor)
 
     @property
-    def window(self) -> int:
-        return self._inner.window
-
-    @property
-    def process_id(self) -> int:
-        return self._inner.process_id
+    def handle(self) -> int:
+        return self._inner.handle()
 
     def raw_frames(self) -> Iterator[Frame]:
         while True:
@@ -52,14 +54,18 @@ class Capture:
         self._inner.stop()
 
 
-def show(window_name: str):
+def show(args):
     from time import perf_counter
     import cv2
 
     try:
         cv2.namedWindow('zbl', cv2.WINDOW_NORMAL)
 
-        with Capture(name=window_name) as cap:
+        with Capture(
+            window_name=args.window_name,
+            display_id=args.display_id,
+            capture_cursor=args.capture_cursor
+        ) as cap:
             t = perf_counter()
             last_print = perf_counter()
             t_total = 0

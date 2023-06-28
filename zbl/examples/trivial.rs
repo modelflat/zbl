@@ -2,23 +2,35 @@ use std::time::Instant;
 
 use clap::Parser;
 use opencv::{highgui, prelude::*};
-use zbl::{init, Capture, Frame, Window};
+use zbl::{display::Display, Capturable, Capture, Frame, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
 struct Args {
     #[clap(long)]
-    window: String,
+    window_name: Option<String>,
+    #[clap(long)]
+    display_id: Option<usize>,
 }
 
 fn main() {
-    init();
+    zbl::init();
 
     let args = Args::parse();
-    let window = Window::find_first(&args.window).expect("failed to find window");
-    let mut capturer = Capture::new(window).expect("failed to initialize capture");
 
-    capturer.start().expect("failed to start capture");
+    let mut target = if let Some(window_name) = args.window_name {
+        let window = Window::find_first(&window_name).expect("failed to find window");
+        Box::new(window) as Box<dyn Capturable>
+    } else if let Some(display_id) = args.display_id {
+        let display = Display::find_by_id(display_id).expect("failed to find display");
+        Box::new(display) as Box<dyn Capturable>
+    } else {
+        panic!("either --window-name or --display-id should be set!");
+    };
+
+    let mut capture = Capture::new(target, true).expect("failed to initialize capture");
+
+    capture.start().expect("failed to start capture");
 
     highgui::named_window("Test", highgui::WINDOW_AUTOSIZE).expect("failed to setup opencv window");
 
@@ -28,7 +40,7 @@ fn main() {
     let mut tt = 0f32;
     loop {
         let t = Instant::now();
-        if let Some(Frame { texture, ptr }) = capturer.grab().expect("failed to get frame") {
+        if let Some(Frame { texture, ptr }) = capture.grab().expect("failed to get frame") {
             let mat = unsafe {
                 Mat::new_size_with_data(
                     opencv::core::Size::new(texture.desc.Width as i32, texture.desc.Height as i32),
@@ -56,5 +68,5 @@ fn main() {
         }
     }
 
-    capturer.stop().expect("failed to stop capture");
+    capture.stop().expect("failed to stop capture");
 }

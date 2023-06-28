@@ -1,18 +1,28 @@
 pub mod capture;
+pub mod display;
 pub mod staging_texture;
 pub mod util;
 pub mod window;
 
 pub use capture::{Capture, Frame};
+pub use display::Display;
 pub use window::Window;
 
 // re-export winapi
 pub use windows;
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use windows::Win32::{
-    System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
-    UI::HiDpi::{SetProcessDpiAwareness, PROCESS_SYSTEM_DPI_AWARE},
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc::Receiver,
+};
+use windows::{
+    core::Result,
+    Graphics::Capture::GraphicsCaptureItem,
+    Win32::{
+        Graphics::Direct3D11::D3D11_BOX,
+        System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
+        UI::HiDpi::{SetProcessDpiAwareness, PROCESS_SYSTEM_DPI_AWARE},
+    },
 };
 
 pub fn init() {
@@ -34,4 +44,14 @@ pub fn set_dpi_aware() {
     unsafe {
         SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE).ok();
     }
+}
+
+pub trait Capturable {
+    fn create_capture_item(&self) -> Result<GraphicsCaptureItem>;
+
+    fn get_client_box(&self) -> Result<D3D11_BOX>;
+
+    fn get_close_notification_channel(&self) -> Receiver<()>;
+
+    fn get_raw_handle(&self) -> isize;
 }

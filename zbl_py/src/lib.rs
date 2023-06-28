@@ -59,17 +59,30 @@ pub struct Capture {
 }
 
 impl Capture {
-    pub fn from_window(window: ::zbl::Window) -> Result<Self> {
-        // TODO expose as python api, call on module loaded?
+    pub fn from_capturable(
+        capturable: Box<dyn ::zbl::Capturable>,
+        capture_cursor: bool,
+    ) -> Result<Self> {
         ::zbl::init();
-        let capture = ::zbl::Capture::new(window)?;
+        let capture = ::zbl::Capture::new(capturable, capture_cursor)?;
         Ok(Self { inner: capture })
     }
 
-    pub fn from_window_name(name: &str) -> Result<Self> {
+    pub fn from_window_name(name: &str, capture_cursor: bool) -> Result<Self> {
         let window = ::zbl::Window::find_first(name)
             .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
-        Self::from_window(window)
+        Self::from_capturable(
+            Box::new(window) as Box<dyn ::zbl::Capturable>,
+            capture_cursor,
+        )
+    }
+
+    pub fn from_display_id(id: usize, capture_cursor: bool) -> Result<Self> {
+        let display = ::zbl::Display::find_by_id(id)?;
+        Self::from_capturable(
+            Box::new(display) as Box<dyn ::zbl::Capturable>,
+            capture_cursor,
+        )
     }
 
     fn _start(&self) -> Result<()> {
@@ -97,26 +110,30 @@ impl Capture {
 #[pymethods]
 impl Capture {
     #[new]
-    pub fn new(name: Option<&str>, handle: Option<i32>) -> PyResult<Self> {
-        if let Some(name) = name {
-            Ok(Self::from_window_name(name)?)
-        } else if let Some(handle) = handle {
-            Ok(Self::from_window(::zbl::Window::new(HWND(
-                handle as isize,
-            )))?)
+    pub fn new(
+        window_name: Option<&str>,
+        window_handle: Option<i32>,
+        display_id: Option<i32>,
+        capture_cursor: Option<bool>,
+    ) -> PyResult<Self> {
+        let capture_cursor = capture_cursor.unwrap_or(false);
+        if let Some(name) = window_name {
+            Ok(Self::from_window_name(name, capture_cursor)?)
+        } else if let Some(handle) = window_handle {
+            Ok(Self::from_capturable(
+                Box::new(::zbl::Window::new(HWND(handle as isize))) as Box<dyn ::zbl::Capturable>,
+                capture_cursor,
+            )?)
+        } else if let Some(display_id) = display_id {
+            Ok(Self::from_display_id(display_id as usize, capture_cursor)?)
         } else {
             Err(Error::NeitherNameNorHandleIsSet)?
         }
     }
 
     #[getter]
-    pub fn window(&self) -> PyResult<isize> {
-        Ok(self.inner.window().handle.0)
-    }
-
-    #[getter]
-    pub fn process_id(&self) -> PyResult<usize> {
-        Ok(self.inner.window().get_process_id() as usize)
+    pub fn handle(&self) -> PyResult<isize> {
+        Ok(self.inner.capturable().get_raw_handle())
     }
 
     pub fn start(&self) -> PyResult<()> {
