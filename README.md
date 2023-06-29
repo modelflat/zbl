@@ -28,6 +28,9 @@ with Capture(window_name='visual studio code') as cap:
 
 The snippet above will capture a window which title contains the string `visual studio code`, take one frame (which is represented as a `numpy` array) and print its shape.
 
+See `Capture` constructor for more options. It is possible to capture the entire screen using `display_id` argument,
+for example.
+
 To run an example using OpenCV's `highgui`:
 
 1. Install `opencv-python`
