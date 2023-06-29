@@ -18,7 +18,7 @@ fn main() {
 
     let args = Args::parse();
 
-    let mut target = if let Some(window_name) = args.window_name {
+    let target = if let Some(window_name) = args.window_name {
         let window = Window::find_first(&window_name).expect("failed to find window");
         Box::new(window) as Box<dyn Capturable>
     } else if let Some(display_id) = args.display_id {
@@ -32,7 +32,8 @@ fn main() {
 
     capture.start().expect("failed to start capture");
 
-    highgui::named_window("Test", highgui::WINDOW_AUTOSIZE).expect("failed to setup opencv window");
+    highgui::named_window("Test", highgui::WINDOW_NORMAL | highgui::WINDOW_KEEPRATIO)
+        .expect("failed to setup opencv window");
 
     let start = Instant::now();
     let mut prev = 0;

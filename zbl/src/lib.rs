@@ -21,7 +21,7 @@ use windows::{
     Win32::{
         Graphics::Direct3D11::D3D11_BOX,
         System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
-        UI::HiDpi::{SetProcessDpiAwareness, PROCESS_SYSTEM_DPI_AWARE},
+        UI::HiDpi::{SetProcessDpiAwareness, PROCESS_PER_MONITOR_DPI_AWARE},
     },
 };
 
@@ -42,7 +42,7 @@ pub fn ro_initialize_once() {
 
 pub fn set_dpi_aware() {
     unsafe {
-        SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE).ok();
+        SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE).ok();
     }
 }
 

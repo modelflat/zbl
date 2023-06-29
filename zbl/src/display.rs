@@ -74,6 +74,11 @@ impl Display {
         let displays = *enumerate_displays()?;
         displays[id].clone()
     }
+
+    pub fn get_virtual_size(&self) -> (i32, i32) {
+        let rect = self.display_info.monitorInfo.rcMonitor;
+        (rect.right - rect.left, rect.bottom - rect.top)
+    }
 }
 
 impl Capturable for Display {
@@ -83,16 +88,15 @@ impl Capturable for Display {
     }
 
     fn get_client_box(&self) -> Result<D3D11_BOX> {
-        let mut client_box = D3D11_BOX::default();
-        let rect = self.display_info.monitorInfo.rcMonitor;
+        let (w, h) = self.get_virtual_size();
 
+        let mut client_box = D3D11_BOX::default();
         client_box.left = 0;
-        client_box.right = (rect.right - rect.left) as u32;
+        client_box.right = w as u32;
         client_box.top = 0;
-        client_box.bottom = (rect.bottom - rect.top) as u32;
+        client_box.bottom = h as u32;
         client_box.front = 0;
         client_box.back = 1;
-
         Ok(client_box)
     }
 

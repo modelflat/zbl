@@ -9,6 +9,9 @@ from .zbl import Capture as _NativeCapture, Frame
 
 uint8_ptr = C.POINTER(C.c_uint8)
 
+# set proces to be DPI-aware
+_ = C.windll.shcore.SetProcessDpiAwareness(2)
+
 
 def frame_to_numpy_array(frame: Frame) -> numpy.ndarray:
     arr = numpy.ctypeslib.as_array(
@@ -59,7 +62,7 @@ def show(args):
     import cv2
 
     try:
-        cv2.namedWindow('zbl', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('zbl', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 
         with Capture(
             window_name=args.window_name,
