@@ -109,8 +109,8 @@ impl Capture {
     }
 
     /// Get attached capturable.
-    pub fn capturable(&self) -> &Box<dyn Capturable> {
-        &self.capturable
+    pub fn capturable(&self) -> &dyn Capturable {
+        self.capturable.as_ref()
     }
 
     /// Start capturing frames.

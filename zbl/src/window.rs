@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use windows::{
     core::Result,
     Graphics::Capture::GraphicsCaptureItem,
@@ -34,10 +34,8 @@ use windows::{
 
 use crate::{util::convert_u16_string, Capturable};
 
-lazy_static! {
-    static ref OBJECT_DESTROYED_USER_DATA: RwLock<HashMap<isize, (isize, SyncSender<()>)>> =
-        Default::default();
-}
+static OBJECT_DESTROYED_USER_DATA: Lazy<RwLock<HashMap<isize, (isize, SyncSender<()>)>>> =
+    Lazy::new(Default::default);
 
 extern "system" fn object_destroyed_cb(
     this: HWINEVENTHOOK,

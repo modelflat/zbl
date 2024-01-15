@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use windows::{
     core::Result,
     Graphics::Capture::GraphicsCaptureItem,
@@ -22,10 +22,8 @@ use windows::{
 
 use crate::{util::convert_u16_string, Capturable};
 
-lazy_static! {
-    static ref OBJECT_DESTROYED_USER_DATA: RwLock<HashMap<isize, (isize, SyncSender<()>)>> =
-        Default::default();
-}
+static OBJECT_DESTROYED_USER_DATA: Lazy<RwLock<HashMap<isize, (isize, SyncSender<()>)>>> =
+    Lazy::new(Default::default);
 
 fn get_monitor_info(handle: HMONITOR) -> Result<MONITORINFOEXW> {
     let mut info = MONITORINFOEXW::default();
@@ -89,15 +87,14 @@ impl Capturable for Display {
 
     fn get_client_box(&self) -> Result<D3D11_BOX> {
         let (w, h) = self.get_virtual_size();
-
-        let mut client_box = D3D11_BOX::default();
-        client_box.left = 0;
-        client_box.right = w as u32;
-        client_box.top = 0;
-        client_box.bottom = h as u32;
-        client_box.front = 0;
-        client_box.back = 1;
-        Ok(client_box)
+        Ok(D3D11_BOX {
+            left: 0,
+            right: w as u32,
+            top: 0,
+            bottom: h as u32,
+            front: 0,
+            back: 1,
+        })
     }
 
     fn get_close_notification_channel(&self) -> Receiver<()> {

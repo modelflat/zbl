@@ -1,5 +1,3 @@
 [workspace]
-members = [
-    "zbl",
-    "zbl_py",
-]
+members = ["zbl", "zbl_py"]
+resolver = "2"

@@ -15,7 +15,7 @@ jobs:
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
-        rust-toolchain: 1.67.0
+        rust-toolchain: 1.75.0
         command: build
         args: -m zbl_py/Cargo.toml --release -o dist --find-interpreter
     - name: Upload artifacts
