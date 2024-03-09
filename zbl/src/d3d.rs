@@ -57,9 +57,9 @@ impl D3D {
     pub fn new() -> Result<Self> {
         let device = create_d3d_device()?;
         let context = unsafe {
-            let mut d3d_context = None;
-            device.GetImmediateContext(&mut d3d_context);
-            d3d_context.expect("failed to create d3d_context")
+            device
+                .GetImmediateContext()
+                .expect("D3D11 immediate context")
         };
         let direct3d_device = create_direct3d_device(&device)?;
         Ok(Self {

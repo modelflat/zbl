@@ -81,7 +81,7 @@ extern "system" fn enum_windows_cb(window: HWND, state: LPARAM) -> BOOL {
 fn enumerate_capturable_windows() -> Vec<Window> {
     let state = Box::into_raw(Box::default());
     *unsafe {
-        EnumWindows(Some(enum_windows_cb), LPARAM(state as isize));
+        EnumWindows(Some(enum_windows_cb), LPARAM(state as isize)).expect("EnumWindows");
         Box::from_raw(state)
     }
 }
@@ -213,9 +213,9 @@ impl Capturable for Window {
         let mut client_rect = RECT::default();
         let mut top_left = POINT::default();
         unsafe {
-            GetWindowRect(self.handle, &mut window_rect as *mut _);
+            GetWindowRect(self.handle, &mut window_rect as *mut _).expect("GetWindowRect");
             ClientToScreen(self.handle, &mut top_left as *mut _);
-            GetClientRect(self.handle, &mut client_rect as *mut _);
+            GetClientRect(self.handle, &mut client_rect as *mut _).expect("GetWindowRect");
         }
 
         let mut client_box = D3D11_BOX::default();

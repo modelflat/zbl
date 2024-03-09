@@ -10,8 +10,7 @@ name = "zbl"
 once_cell = "1"
 
 [dependencies.windows]
-# TODO bumping the version brings on weird API which i'm not sure how to work with
-version = "0.43"
+version = "0.54"
 features = [
     "Foundation",
     "Graphics_Capture",
