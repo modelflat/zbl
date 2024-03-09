@@ -1,4 +1,5 @@
 pub mod capture;
+pub mod d3d;
 pub mod display;
 pub mod staging_texture;
 pub mod util;

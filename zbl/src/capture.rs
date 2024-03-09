@@ -5,19 +5,16 @@ use windows::{
     Foundation::TypedEventHandler,
     Graphics::{
         Capture::{Direct3D11CaptureFrame, Direct3D11CaptureFramePool, GraphicsCaptureSession},
-        DirectX::{Direct3D11::IDirect3DDevice, DirectXPixelFormat},
+        DirectX::DirectXPixelFormat,
         SizeInt32,
     },
     Win32::Graphics::Direct3D11::{
-        ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D, D3D11_BOX, D3D11_MAPPED_SUBRESOURCE,
-        D3D11_TEXTURE2D_DESC,
+        ID3D11Texture2D, D3D11_BOX, D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC,
     },
 };
 
 use crate::{
-    staging_texture::StagingTexture,
-    util::{create_d3d_device, create_direct3d_device, get_dxgi_interface_from_object},
-    Capturable,
+    d3d::D3D, staging_texture::StagingTexture, util::get_dxgi_interface_from_object, Capturable,
 };
 
 pub struct Frame<'a> {
@@ -26,9 +23,7 @@ pub struct Frame<'a> {
 }
 
 pub struct Capture {
-    device: ID3D11Device,
-    direct3d_device: IDirect3DDevice,
-    context: ID3D11DeviceContext,
+    d3d: D3D,
     capturable: Box<dyn Capturable>,
     capture_box: D3D11_BOX,
     capture_done_signal: Receiver<()>,
@@ -46,19 +41,12 @@ impl Capture {
     ///
     /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
     pub fn new(capturable: Box<dyn Capturable>, capture_cursor: bool) -> Result<Self> {
-        let device = create_d3d_device()?;
-        let context = unsafe {
-            let mut d3d_context = None;
-            device.GetImmediateContext(&mut d3d_context);
-            d3d_context.expect("failed to create d3d_context")
-        };
-        let direct3d_device = create_direct3d_device(&device)?;
-
+        let d3d = D3D::new()?;
         let capture_item = capturable.create_capture_item()?;
         let capture_item_size = capture_item.Size()?;
 
         let frame_pool = Direct3D11CaptureFramePool::CreateFreeThreaded(
-            &direct3d_device,
+            &d3d.direct3d_device,
             DirectXPixelFormat::B8G8R8A8UIntNormalized,
             1,
             capture_item_size,
@@ -93,9 +81,7 @@ impl Capture {
         let capture_done_signal = capturable.get_close_notification_channel();
 
         Ok(Self {
-            device,
-            direct3d_device,
-            context,
+            d3d,
             capturable,
             capture_box,
             capture_done_signal,
@@ -134,7 +120,7 @@ impl Capture {
                 .staging_texture
                 .as_ref()
                 .unwrap()
-                .as_mapped(&self.context)?;
+                .as_mapped(&self.d3d.context)?;
             Ok(Some(Frame { texture, ptr }))
         } else {
             Ok(None)
@@ -157,7 +143,7 @@ impl Capture {
         let capture_item_size = capture_item.Size()?;
         self.capture_box = self.capturable.get_client_box()?;
         self.frame_pool.Recreate(
-            &self.direct3d_device,
+            &self.d3d.direct3d_device,
             DirectXPixelFormat::B8G8R8A8UIntNormalized,
             1,
             capture_item_size,
@@ -196,7 +182,7 @@ impl Capture {
             unsafe { frame_texture.GetDesc(&mut desc) };
             self.recreate_frame_pool()?;
             let new_staging_texture = StagingTexture::new(
-                &self.device,
+                &self.d3d.device,
                 self.capture_box.right - self.capture_box.left,
                 self.capture_box.bottom - self.capture_box.top,
                 desc.Format,
@@ -208,7 +194,7 @@ impl Capture {
         let copy_dest = self.staging_texture.as_ref().unwrap().as_resource()?;
         let copy_src = frame_texture.cast()?;
         unsafe {
-            self.context.CopySubresourceRegion(
+            self.d3d.context.CopySubresourceRegion(
                 Some(&copy_dest),
                 0,
                 0,
