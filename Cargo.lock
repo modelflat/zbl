@@ -702,7 +702,7 @@ checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
 
 [[package]]
 name = "zbl"
-version = "0.1.3"
+version = "0.2.0"
 dependencies = [
  "clap",
  "once_cell",
@@ -712,7 +712,7 @@ dependencies = [
 
 [[package]]
 name = "zbl_py"
-version = "0.1.3"
+version = "0.2.0"
 dependencies = [
  "pyo3",
  "thiserror",
