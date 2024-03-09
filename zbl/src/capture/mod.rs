@@ -1,3 +1,6 @@
+pub mod display;
+pub mod window;
+
 use std::sync::mpsc::{sync_channel, Receiver, TryRecvError, TrySendError};
 
 use windows::{

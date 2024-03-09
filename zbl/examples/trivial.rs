@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use opencv::{highgui, prelude::*};
-use zbl::{display::Display, Capturable, Capture, Frame, Window};
+use zbl::{Capturable, Capture, Display, Frame, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
