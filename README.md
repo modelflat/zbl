@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/zbl.svg)](https://badge.fury.io/py/zbl)
 
-`zbl` is a Rust and Python library for screen/window capturing. It provides a simplified interface
+`zbl` is a Rust and Python library for screen/window capturing. It provides an interface
 to `Windows.Graphics.Capture` API with a focus on simplifying integrating computer vision applications for Windows Desktop apps.
 
 **This library is in early development stage**. This means that it's only verified to work for a 'happy path'
