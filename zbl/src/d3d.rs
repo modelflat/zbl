@@ -25,7 +25,7 @@ fn create_d3d_device() -> Result<ID3D11Device> {
                 D3D11_CREATE_DEVICE_BGRA_SUPPORT,
                 None,
                 D3D11_SDK_VERSION,
-                Some(&mut device as *mut _),
+                Some(&mut device),
                 None,
                 None,
             )
@@ -56,11 +56,7 @@ pub struct D3D {
 impl D3D {
     pub fn new() -> Result<Self> {
         let device = create_d3d_device()?;
-        let context = unsafe {
-            device
-                .GetImmediateContext()
-                .expect("D3D11 immediate context")
-        };
+        let context = unsafe { device.GetImmediateContext()? };
         let direct3d_device = create_direct3d_device(&device)?;
         Ok(Self {
             device,

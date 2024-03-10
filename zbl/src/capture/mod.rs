@@ -7,22 +7,32 @@ use windows::{
     core::{IInspectable, Interface, Result},
     Foundation::TypedEventHandler,
     Graphics::{
-        Capture::{Direct3D11CaptureFrame, Direct3D11CaptureFramePool, GraphicsCaptureSession},
+        Capture::{
+            Direct3D11CaptureFrame, Direct3D11CaptureFramePool, GraphicsCaptureItem,
+            GraphicsCaptureSession,
+        },
         DirectX::DirectXPixelFormat,
         SizeInt32,
     },
-    Win32::Graphics::Direct3D11::{
-        ID3D11Texture2D, D3D11_BOX, D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC,
+    Win32::{
+        Graphics::Direct3D11::{ID3D11Texture2D, D3D11_BOX, D3D11_TEXTURE2D_DESC},
+        System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess,
     },
 };
 
 use crate::{
-    d3d::D3D, staging_texture::StagingTexture, util::get_dxgi_interface_from_object, Capturable,
+    d3d::D3D,
+    staging_texture::{Frame, StagingTexture},
 };
 
-pub struct Frame<'a> {
-    pub texture: &'a StagingTexture,
-    pub ptr: D3D11_MAPPED_SUBRESOURCE,
+pub trait Capturable {
+    fn create_capture_item(&self) -> Result<GraphicsCaptureItem>;
+
+    fn get_client_box(&self) -> Result<D3D11_BOX>;
+
+    fn get_close_notification_channel(&self) -> Receiver<()>;
+
+    fn get_raw_handle(&self) -> isize;
 }
 
 pub struct Capture {
@@ -33,6 +43,7 @@ pub struct Capture {
     frame_pool: Direct3D11CaptureFramePool,
     frame_source: Receiver<Option<Direct3D11CaptureFrame>>,
     session: GraphicsCaptureSession,
+    use_staging: bool,
     staging_texture: Option<StagingTexture>,
     content_size: SizeInt32,
     stopped: bool,
@@ -68,10 +79,10 @@ impl Capture {
                     match sender.try_send(Some(frame)) {
                         Err(TrySendError::Full(_)) => {
                             // TODO keep track of these frames?
-                            println!("dropping frame {}", ts.Duration);
+                            log::info!("dropping frame {}", ts.Duration);
                         }
                         Err(TrySendError::Disconnected(_)) => {
-                            println!("frame receiver disconnected");
+                            log::info!("frame receiver disconnected");
                         }
                         _ => {}
                     }
@@ -91,6 +102,7 @@ impl Capture {
             frame_pool,
             frame_source: receiver,
             session,
+            use_staging: true,
             staging_texture: None,
             content_size: Default::default(),
             stopped: false,
@@ -117,16 +129,18 @@ impl Capture {
     /// * `Ok(None)` if no frames can be received (e.g. when the window was closed).
     /// * `Err(...)` if an error has occured while capturing a frame.
     pub fn grab(&mut self) -> Result<Option<Frame>> {
-        if self.grab_next()? {
-            let texture = self.staging_texture.as_ref().unwrap();
-            let ptr = self
-                .staging_texture
-                .as_ref()
-                .unwrap()
-                .as_mapped(&self.d3d.context)?;
-            Ok(Some(Frame { texture, ptr }))
-        } else {
-            Ok(None)
+        match self.receive_next_frame()? {
+            Some(frame) => {
+                if self.use_staging {
+                    self.copy_to_staging(frame)?;
+                    let texture = self.staging_texture.as_ref().unwrap();
+                    let ptr = texture.as_mapped(&self.d3d.context)?;
+                    Ok(Some(Frame { texture, ptr }))
+                } else {
+                    unimplemented!()
+                }
+            }
+            None => Ok(None),
         }
     }
 
@@ -139,6 +153,12 @@ impl Capture {
         self.session.Close()?;
         self.frame_pool.Close()?;
         Ok(())
+    }
+
+    fn needs_resize(&self, new_size: SizeInt32) -> bool {
+        self.content_size.Width != new_size.Width
+            || self.content_size.Height != new_size.Height
+            || self.staging_texture.is_none()
     }
 
     fn recreate_frame_pool(&mut self) -> Result<()> {
@@ -154,33 +174,32 @@ impl Capture {
         Ok(())
     }
 
-    fn grab_next(&mut self) -> Result<bool> {
+    fn receive_next_frame(&mut self) -> Result<Option<Direct3D11CaptureFrame>> {
         if self.stopped {
-            return Ok(false);
+            return Ok(None);
         }
-        let frame = loop {
+        loop {
             match self.frame_source.try_recv() {
-                Ok(Some(f)) => break f,
+                Ok(Some(f)) => return Ok(Some(f)),
                 Err(TryRecvError::Empty) => {
                     // TODO busy loop? so uncivilized
                     if let Ok(()) | Err(TryRecvError::Disconnected) =
                         self.capture_done_signal.try_recv()
                     {
                         self.stop()?;
-                        return Ok(false);
+                        return Ok(None);
                     }
                 }
-                Ok(None) | Err(TryRecvError::Disconnected) => return Ok(false),
+                Ok(None) | Err(TryRecvError::Disconnected) => return Ok(None),
             }
-        };
+        }
+    }
 
+    fn copy_to_staging(&mut self, frame: Direct3D11CaptureFrame) -> Result<()> {
         let frame_texture: ID3D11Texture2D = get_dxgi_interface_from_object(&frame.Surface()?)?;
         let content_size = frame.ContentSize()?;
 
-        if self.content_size.Width != content_size.Width
-            || self.content_size.Height != content_size.Height
-            || self.staging_texture.is_none()
-        {
+        if self.needs_resize(content_size) {
             let mut desc = D3D11_TEXTURE2D_DESC::default();
             unsafe { frame_texture.GetDesc(&mut desc) };
             self.recreate_frame_pool()?;
@@ -189,6 +208,7 @@ impl Capture {
                 self.capture_box.right - self.capture_box.left,
                 self.capture_box.bottom - self.capture_box.top,
                 desc.Format,
+                true,
             )?;
             self.staging_texture = Some(new_staging_texture);
             self.content_size = content_size;
@@ -205,13 +225,19 @@ impl Capture {
                 0,
                 Some(&copy_src),
                 0,
-                Some(&self.capture_box as *const _),
+                Some(&self.capture_box),
             );
         }
 
         // TODO queue a fence here? currently we ensure buffer is copied by map-unmap texture outside of this method,
         // which is probably not the best way to do this
 
-        Ok(true)
+        Ok(())
     }
+}
+
+fn get_dxgi_interface_from_object<S: Interface, R: Interface>(object: &S) -> Result<R> {
+    let access: IDirect3DDxgiInterfaceAccess = object.cast()?;
+    let object = unsafe { access.GetInterface::<R>()? };
+    Ok(object)
 }

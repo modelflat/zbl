@@ -8,6 +8,7 @@ name = "zbl"
 
 [dependencies]
 once_cell = "1"
+log = "0.4"
 
 [dependencies.windows]
 version = "0.54"
@@ -31,4 +32,8 @@ features = [
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }
-opencv = "0.88"
+
+[dev-dependencies.opencv]
+version = "0.88"
+default-features = false
+features = ["highgui"]

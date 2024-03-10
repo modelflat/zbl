@@ -8,7 +8,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::Result,
+    core::{factory, Result},
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
         Foundation::{BOOL, LPARAM, RECT},
@@ -20,7 +20,9 @@ use windows::{
     },
 };
 
-use crate::{util::convert_u16_string, Capturable};
+use crate::util::convert_u16_string;
+
+use super::Capturable;
 
 static OBJECT_DESTROYED_USER_DATA: Lazy<RwLock<HashMap<isize, (isize, SyncSender<()>)>>> =
     Lazy::new(Default::default);
@@ -81,7 +83,7 @@ impl Display {
 
 impl Capturable for Display {
     fn create_capture_item(&self) -> Result<GraphicsCaptureItem> {
-        let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
+        let interop = factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
         unsafe { interop.CreateForMonitor(self.handle) }
     }
 

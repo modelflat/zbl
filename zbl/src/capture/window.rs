@@ -32,7 +32,9 @@ use windows::{
     },
 };
 
-use crate::{util::convert_u16_string, Capturable};
+use crate::util::convert_u16_string;
+
+use super::Capturable;
 
 static OBJECT_DESTROYED_USER_DATA: Lazy<RwLock<HashMap<isize, (isize, SyncSender<()>)>>> =
     Lazy::new(Default::default);
@@ -146,12 +148,16 @@ impl Window {
         self.matches_title_and_class_name("PopupHost", "Xaml_WindowedPopupClass")
     }
 
+    pub fn is_visible(&self) -> bool {
+        unsafe { IsWindowVisible(self.handle).as_bool() }
+    }
+
     pub fn is_capturable(&self) -> bool {
         unsafe {
             if self.title.is_empty()
+                || !self.is_visible()
                 || self.handle == GetShellWindow()
                 || self.handle == GetConsoleWindow()
-                || !IsWindowVisible(self.handle).as_bool()
                 || GetAncestor(self.handle, GA_ROOT) != self.handle
             {
                 return false;
@@ -197,7 +203,7 @@ impl Window {
 
     pub fn get_process_id(&self) -> u32 {
         let mut process_id = 0u32;
-        unsafe { GetWindowThreadProcessId(self.handle, Some(&mut process_id as *mut _)) };
+        unsafe { GetWindowThreadProcessId(self.handle, Some(&mut process_id)) };
         process_id
     }
 }
@@ -213,9 +219,9 @@ impl Capturable for Window {
         let mut client_rect = RECT::default();
         let mut top_left = POINT::default();
         unsafe {
-            GetWindowRect(self.handle, &mut window_rect as *mut _).expect("GetWindowRect");
-            ClientToScreen(self.handle, &mut top_left as *mut _);
-            GetClientRect(self.handle, &mut client_rect as *mut _).expect("GetWindowRect");
+            GetWindowRect(self.handle, &mut window_rect)?;
+            ClientToScreen(self.handle, &mut top_left);
+            GetClientRect(self.handle, &mut client_rect)?;
         }
 
         let mut client_box = D3D11_BOX::default();
