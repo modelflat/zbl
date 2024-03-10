@@ -1,6 +1,7 @@
 [project]
 name = "zbl"
-version = "0.2.0"
+description = "real-time window capture library based on D3D11 and Windows.Graphics.Capture"
+version = "0.2.1"
 readme = "../README.md"
 requires-python = ">=3.7"
 license = { file = "../LICENSE.txt" }
@@ -8,9 +9,20 @@ keywords = ["windows", "d3d11", "window-capture", "graphics-capture", "cv"]
 dependencies = ["numpy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Programming Language :: Python",
     "Programming Language :: Rust",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
+
+[project.urls]
+Homepage = "https://github.com/modelflat/zbl"
+Repository = "https://github.com/modelflat/zbl"
 
 [project.optional-dependencies]
 example = ["opencv-python~=4.6.0"]
