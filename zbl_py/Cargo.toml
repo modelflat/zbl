@@ -8,7 +8,7 @@ name = "zbl"
 crate-type = ["cdylib"]
 
 [dependencies]
-zbl = { path = "../zbl" }
+zbl = { path = "../zbl", default-features = false }
 thiserror = "1"
 
 [dependencies.pyo3]

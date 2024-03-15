@@ -15,15 +15,14 @@ use windows::{
         SizeInt32,
     },
     Win32::{
-        Graphics::Direct3D11::{ID3D11Texture2D, D3D11_BOX, D3D11_TEXTURE2D_DESC},
+        Graphics::Direct3D11::{
+            ID3D11Texture2D, D3D11_BOX, D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC,
+        },
         System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess,
     },
 };
 
-use crate::{
-    d3d::D3D,
-    staging_texture::{Frame, StagingTexture},
-};
+use crate::{d3d::D3D, frame::Frame};
 
 pub trait Capturable {
     fn create_capture_item(&self) -> Result<GraphicsCaptureItem>;
@@ -43,8 +42,8 @@ pub struct Capture {
     frame_pool: Direct3D11CaptureFramePool,
     frame_source: Receiver<Option<Direct3D11CaptureFrame>>,
     session: GraphicsCaptureSession,
-    use_staging: bool,
-    staging_texture: Option<StagingTexture>,
+    use_staging_texture: bool,
+    staging_texture: Option<ID3D11Texture2D>,
     content_size: SizeInt32,
     stopped: bool,
 }
@@ -54,7 +53,11 @@ impl Capture {
     /// frame pool / capture session.
     ///
     /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
-    pub fn new(capturable: Box<dyn Capturable>, capture_cursor: bool) -> Result<Self> {
+    pub fn new(
+        capturable: Box<dyn Capturable>,
+        capture_cursor: bool,
+        use_staging_texture: bool,
+    ) -> Result<Self> {
         let d3d = D3D::new()?;
         let capture_item = capturable.create_capture_item()?;
         let capture_item_size = capture_item.Size()?;
@@ -102,7 +105,7 @@ impl Capture {
             frame_pool,
             frame_source: receiver,
             session,
-            use_staging: true,
+            use_staging_texture,
             staging_texture: None,
             content_size: Default::default(),
             stopped: false,
@@ -131,13 +134,20 @@ impl Capture {
     pub fn grab(&mut self) -> Result<Option<Frame>> {
         match self.receive_next_frame()? {
             Some(frame) => {
-                if self.use_staging {
-                    self.copy_to_staging(frame)?;
-                    let texture = self.staging_texture.as_ref().unwrap();
-                    let ptr = texture.as_mapped(&self.d3d.context)?;
-                    Ok(Some(Frame { texture, ptr }))
+                let texture: ID3D11Texture2D = get_dxgi_interface_from_object(&frame.Surface()?)?;
+                if self.use_staging_texture {
+                    self.copy_to_staging(&texture)?;
+                    let texture = self
+                        .staging_texture
+                        .clone()
+                        .expect("staging texture should be initialized at this point");
+                    let ptr = self.d3d.map_unmap_texture(&texture)?;
+                    Ok(Some(Frame::new(texture, ptr)))
                 } else {
-                    unimplemented!()
+                    Ok(Some(Frame::new(
+                        texture,
+                        D3D11_MAPPED_SUBRESOURCE::default(),
+                    )))
                 }
             }
             None => Ok(None),
@@ -195,39 +205,31 @@ impl Capture {
         }
     }
 
-    fn copy_to_staging(&mut self, frame: Direct3D11CaptureFrame) -> Result<()> {
-        let frame_texture: ID3D11Texture2D = get_dxgi_interface_from_object(&frame.Surface()?)?;
-        let content_size = frame.ContentSize()?;
+    fn copy_to_staging(&mut self, frame_texture: &ID3D11Texture2D) -> Result<()> {
+        let mut desc = D3D11_TEXTURE2D_DESC::default();
+        unsafe { frame_texture.GetDesc(&mut desc) };
+        let content_size = SizeInt32 {
+            Width: desc.Width as i32,
+            Height: desc.Height as i32,
+        };
 
         if self.needs_resize(content_size) {
-            let mut desc = D3D11_TEXTURE2D_DESC::default();
-            unsafe { frame_texture.GetDesc(&mut desc) };
             self.recreate_frame_pool()?;
-            let new_staging_texture = StagingTexture::new(
-                &self.d3d.device,
+            let new_staging_texture = self.d3d.create_texture(
                 self.capture_box.right - self.capture_box.left,
                 self.capture_box.bottom - self.capture_box.top,
                 desc.Format,
-                true,
+                self.use_staging_texture,
             )?;
             self.staging_texture = Some(new_staging_texture);
             self.content_size = content_size;
         }
 
-        let copy_dest = self.staging_texture.as_ref().unwrap().as_resource()?;
-        let copy_src = frame_texture.cast()?;
-        unsafe {
-            self.d3d.context.CopySubresourceRegion(
-                Some(&copy_dest),
-                0,
-                0,
-                0,
-                0,
-                Some(&copy_src),
-                0,
-                Some(&self.capture_box),
-            );
-        }
+        self.d3d.copy_texture(
+            frame_texture,
+            self.staging_texture.as_ref().unwrap(),
+            &self.capture_box,
+        )?;
 
         // TODO queue a fence here? currently we ensure buffer is copied by map-unmap texture outside of this method,
         // which is probably not the best way to do this

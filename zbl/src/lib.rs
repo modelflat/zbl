@@ -1,10 +1,10 @@
 pub mod capture;
 pub mod d3d;
-pub mod staging_texture;
+pub mod frame;
 pub mod util;
 
 pub use capture::{display::Display, window::Window, Capturable, Capture};
-pub use staging_texture::Frame;
+pub use frame::Frame;
 
 // re-export winapi
 pub use windows;

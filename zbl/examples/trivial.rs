@@ -1,8 +1,12 @@
 use std::time::Instant;
 
 use clap::Parser;
-use opencv::{highgui, prelude::*};
-use zbl::{Capturable, Capture, Display, Frame, Window};
+use opencv::{
+    core::{Size, CV_8UC4},
+    highgui,
+    prelude::*,
+};
+use zbl::{Capturable, Capture, Display, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -28,7 +32,7 @@ fn main() {
         panic!("either --window-name or --display-id should be set!");
     };
 
-    let mut capture = Capture::new(target, true).expect("failed to initialize capture");
+    let mut capture = Capture::new(target, true, true).expect("failed to initialize capture");
 
     capture.start().expect("failed to start capture");
 
@@ -41,13 +45,14 @@ fn main() {
     let mut tt = 0f32;
     loop {
         let t = Instant::now();
-        if let Some(Frame { texture, ptr }) = capture.grab().expect("failed to get frame") {
+        if let Some(frame) = capture.grab().expect("failed to get frame") {
+            let desc = frame.desc();
             let mat = unsafe {
                 Mat::new_size_with_data(
-                    opencv::core::Size::new(texture.desc.Width as i32, texture.desc.Height as i32),
-                    opencv::core::CV_8UC4,
-                    ptr.pData,
-                    ptr.RowPitch as usize,
+                    Size::new(desc.Width as i32, desc.Height as i32),
+                    CV_8UC4,
+                    frame.mapped_ptr.pData,
+                    frame.mapped_ptr.RowPitch as usize,
                 )
             }
             .expect("failed to convert to opencv frame");

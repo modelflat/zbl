@@ -62,26 +62,37 @@ impl Capture {
     pub fn from_capturable(
         capturable: Box<dyn ::zbl::Capturable>,
         capture_cursor: bool,
+        use_staging_texture: bool,
     ) -> Result<Self> {
         ::zbl::init();
-        let capture = ::zbl::Capture::new(capturable, capture_cursor)?;
+        let capture = ::zbl::Capture::new(capturable, capture_cursor, use_staging_texture)?;
         Ok(Self { inner: capture })
     }
 
-    pub fn from_window_name(name: &str, capture_cursor: bool) -> Result<Self> {
+    pub fn from_window_name(
+        name: &str,
+        capture_cursor: bool,
+        use_staging_texture: bool,
+    ) -> Result<Self> {
         let window = ::zbl::Window::find_first(name)
             .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
         Self::from_capturable(
             Box::new(window) as Box<dyn ::zbl::Capturable>,
             capture_cursor,
+            use_staging_texture,
         )
     }
 
-    pub fn from_display_id(id: usize, capture_cursor: bool) -> Result<Self> {
+    pub fn from_display_id(
+        id: usize,
+        capture_cursor: bool,
+        use_staging_texture: bool,
+    ) -> Result<Self> {
         let display = ::zbl::Display::find_by_id(id)?;
         Self::from_capturable(
             Box::new(display) as Box<dyn ::zbl::Capturable>,
             capture_cursor,
+            use_staging_texture,
         )
     }
 
@@ -90,12 +101,13 @@ impl Capture {
     }
 
     fn _grab(&mut self) -> Result<Option<Frame>> {
-        if let Some(::zbl::Frame { texture, ptr }) = self.inner.grab()? {
+        if let Some(frame) = self.inner.grab()? {
+            let desc = frame.desc();
             Ok(Some(Frame {
-                width: texture.desc.Width,
-                height: texture.desc.Height,
-                row_pitch: ptr.RowPitch,
-                ptr: ptr.pData,
+                width: desc.Width,
+                height: desc.Height,
+                row_pitch: frame.mapped_ptr.RowPitch,
+                ptr: frame.mapped_ptr.pData,
             }))
         } else {
             Ok(None)
@@ -115,17 +127,24 @@ impl Capture {
         window_handle: Option<i32>,
         display_id: Option<i32>,
         capture_cursor: Option<bool>,
+        use_staging_texture: Option<bool>,
     ) -> PyResult<Self> {
         let capture_cursor = capture_cursor.unwrap_or(false);
+        let cpu_access = use_staging_texture.unwrap_or(true);
         if let Some(name) = window_name {
-            Ok(Self::from_window_name(name, capture_cursor)?)
+            Ok(Self::from_window_name(name, capture_cursor, cpu_access)?)
         } else if let Some(handle) = window_handle {
             Ok(Self::from_capturable(
                 Box::new(::zbl::Window::new(HWND(handle as isize))) as Box<dyn ::zbl::Capturable>,
                 capture_cursor,
+                cpu_access,
             )?)
         } else if let Some(display_id) = display_id {
-            Ok(Self::from_display_id(display_id as usize, capture_cursor)?)
+            Ok(Self::from_display_id(
+                display_id as usize,
+                capture_cursor,
+                cpu_access,
+            )?)
         } else {
             Err(Error::NeitherNameNorHandleIsSet)?
         }
