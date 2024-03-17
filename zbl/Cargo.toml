@@ -34,6 +34,7 @@ features = [
 clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies.opencv]
-version = "0.88"
+git = "https://github.com/modelflat/opencv-rust"
+branch = "directx-interop"
 default-features = false
-features = ["highgui"]
+features = ["highgui", "directx"]

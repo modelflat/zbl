@@ -1,4 +1,4 @@
-use ::zbl::windows::Win32::Foundation::HWND;
+use ::zbl::windows::{core::Interface, Win32::Foundation::HWND};
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use std::ffi::c_void;
 
@@ -62,37 +62,29 @@ impl Capture {
     pub fn from_capturable(
         capturable: Box<dyn ::zbl::Capturable>,
         capture_cursor: bool,
-        use_staging_texture: bool,
+        cpu_access: bool,
     ) -> Result<Self> {
         ::zbl::init();
-        let capture = ::zbl::Capture::new(capturable, capture_cursor, use_staging_texture)?;
+        let capture = ::zbl::Capture::new(capturable, capture_cursor, cpu_access)?;
         Ok(Self { inner: capture })
     }
 
-    pub fn from_window_name(
-        name: &str,
-        capture_cursor: bool,
-        use_staging_texture: bool,
-    ) -> Result<Self> {
+    pub fn from_window_name(name: &str, capture_cursor: bool, cpu_access: bool) -> Result<Self> {
         let window = ::zbl::Window::find_first(name)
             .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
         Self::from_capturable(
             Box::new(window) as Box<dyn ::zbl::Capturable>,
             capture_cursor,
-            use_staging_texture,
+            cpu_access,
         )
     }
 
-    pub fn from_display_id(
-        id: usize,
-        capture_cursor: bool,
-        use_staging_texture: bool,
-    ) -> Result<Self> {
+    pub fn from_display_id(id: usize, capture_cursor: bool, cpu_access: bool) -> Result<Self> {
         let display = ::zbl::Display::find_by_id(id)?;
         Self::from_capturable(
             Box::new(display) as Box<dyn ::zbl::Capturable>,
             capture_cursor,
-            use_staging_texture,
+            cpu_access,
         )
     }
 
@@ -107,7 +99,11 @@ impl Capture {
                 width: desc.Width,
                 height: desc.Height,
                 row_pitch: frame.mapped_ptr.RowPitch,
-                ptr: frame.mapped_ptr.pData,
+                ptr: if self.inner.cpu_access {
+                    frame.mapped_ptr.pData
+                } else {
+                    frame.texture.as_raw()
+                },
             }))
         } else {
             Ok(None)
@@ -127,10 +123,10 @@ impl Capture {
         window_handle: Option<i32>,
         display_id: Option<i32>,
         capture_cursor: Option<bool>,
-        use_staging_texture: Option<bool>,
+        cpu_access: Option<bool>,
     ) -> PyResult<Self> {
         let capture_cursor = capture_cursor.unwrap_or(false);
-        let cpu_access = use_staging_texture.unwrap_or(true);
+        let cpu_access = cpu_access.unwrap_or(true);
         if let Some(name) = window_name {
             Ok(Self::from_window_name(name, capture_cursor, cpu_access)?)
         } else if let Some(handle) = window_handle {

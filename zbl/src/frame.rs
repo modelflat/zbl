@@ -8,11 +8,15 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn new(texture: ID3D11Texture2D, mapped_ptr: D3D11_MAPPED_SUBRESOURCE) -> Self {
+    pub fn new_mapped(texture: ID3D11Texture2D, mapped_ptr: D3D11_MAPPED_SUBRESOURCE) -> Self {
         Self {
             texture,
             mapped_ptr,
         }
+    }
+
+    pub fn new(texture: ID3D11Texture2D) -> Self {
+        Self::new_mapped(texture, D3D11_MAPPED_SUBRESOURCE::default())
     }
 
     pub fn desc(&self) -> D3D11_TEXTURE2D_DESC {

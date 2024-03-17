@@ -15,9 +15,7 @@ use windows::{
         SizeInt32,
     },
     Win32::{
-        Graphics::Direct3D11::{
-            ID3D11Texture2D, D3D11_BOX, D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC,
-        },
+        Graphics::Direct3D11::{ID3D11Texture2D, D3D11_BOX, D3D11_TEXTURE2D_DESC},
         System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess,
     },
 };
@@ -35,14 +33,14 @@ pub trait Capturable {
 }
 
 pub struct Capture {
-    d3d: D3D,
+    pub d3d: D3D,
     capturable: Box<dyn Capturable>,
     capture_box: D3D11_BOX,
     capture_done_signal: Receiver<()>,
     frame_pool: Direct3D11CaptureFramePool,
     frame_source: Receiver<Option<Direct3D11CaptureFrame>>,
     session: GraphicsCaptureSession,
-    use_staging_texture: bool,
+    pub cpu_access: bool,
     staging_texture: Option<ID3D11Texture2D>,
     content_size: SizeInt32,
     stopped: bool,
@@ -56,7 +54,7 @@ impl Capture {
     pub fn new(
         capturable: Box<dyn Capturable>,
         capture_cursor: bool,
-        use_staging_texture: bool,
+        cpu_access: bool,
     ) -> Result<Self> {
         let d3d = D3D::new()?;
         let capture_item = capturable.create_capture_item()?;
@@ -105,7 +103,7 @@ impl Capture {
             frame_pool,
             frame_source: receiver,
             session,
-            use_staging_texture,
+            cpu_access,
             staging_texture: None,
             content_size: Default::default(),
             stopped: false,
@@ -134,20 +132,26 @@ impl Capture {
     pub fn grab(&mut self) -> Result<Option<Frame>> {
         match self.receive_next_frame()? {
             Some(frame) => {
-                let texture: ID3D11Texture2D = get_dxgi_interface_from_object(&frame.Surface()?)?;
-                if self.use_staging_texture {
-                    self.copy_to_staging(&texture)?;
-                    let texture = self
-                        .staging_texture
-                        .clone()
-                        .expect("staging texture should be initialized at this point");
-                    let ptr = self.d3d.map_unmap_texture(&texture)?;
-                    Ok(Some(Frame::new(texture, ptr)))
+                let original_texture: ID3D11Texture2D =
+                    get_dxgi_interface_from_object(&frame.Surface()?)?;
+
+                // TODO can we avoid copying data into staging texture when DirectX interop is enabled?
+                // currently it doesn't work because of the following error:
+                //   OpenCL: clCreateFromD3D11Texture2DNV failed in function 'cv::directx::__convertFromD3D11Texture2DNV'
+                // which seems to be in turn caused by presence of D3D11_RESOURCE_MISC_SHARED_NTHANDLE misc flag in the
+                // original frame texture
+                self.copy_to_staging(&original_texture)?;
+
+                let staging_texture = self
+                    .staging_texture
+                    .clone()
+                    .expect("staging texture should be initialized at this point");
+
+                if self.cpu_access {
+                    let ptr = self.d3d.map_unmap_texture(&staging_texture)?;
+                    Ok(Some(Frame::new_mapped(staging_texture, ptr)))
                 } else {
-                    Ok(Some(Frame::new(
-                        texture,
-                        D3D11_MAPPED_SUBRESOURCE::default(),
-                    )))
+                    Ok(Some(Frame::new(staging_texture)))
                 }
             }
             None => Ok(None),
@@ -219,7 +223,7 @@ impl Capture {
                 self.capture_box.right - self.capture_box.left,
                 self.capture_box.bottom - self.capture_box.top,
                 desc.Format,
-                self.use_staging_texture,
+                self.cpu_access,
             )?;
             self.staging_texture = Some(new_staging_texture);
             self.content_size = content_size;
@@ -230,9 +234,6 @@ impl Capture {
             self.staging_texture.as_ref().unwrap(),
             &self.capture_box,
         )?;
-
-        // TODO queue a fence here? currently we ensure buffer is copied by map-unmap texture outside of this method,
-        // which is probably not the best way to do this
 
         Ok(())
     }

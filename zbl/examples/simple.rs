@@ -2,9 +2,8 @@ use std::time::Instant;
 
 use clap::Parser;
 use opencv::{
-    core::{Size, CV_8UC4},
+    core::{Mat, Size, CV_8UC4},
     highgui,
-    prelude::*,
 };
 use zbl::{Capturable, Capture, Display, Window};
 
@@ -39,12 +38,12 @@ fn main() {
     highgui::named_window("Test", highgui::WINDOW_NORMAL | highgui::WINDOW_KEEPRATIO)
         .expect("failed to setup opencv window");
 
+    let mut total_time = 0f32;
+    let mut total_seconds = 0;
+    let mut total_frames = 0;
     let start = Instant::now();
-    let mut prev = 0;
-    let mut cnt = 0;
-    let mut tt = 0f32;
     loop {
-        let t = Instant::now();
+        let t_frame_start = Instant::now();
         if let Some(frame) = capture.grab().expect("failed to get frame") {
             let desc = frame.desc();
             let mat = unsafe {
@@ -56,18 +55,25 @@ fn main() {
                 )
             }
             .expect("failed to convert to opencv frame");
-            let t = Instant::now() - t;
-            cnt += 1;
-            tt += t.as_secs_f32();
-            if (Instant::now() - start).as_secs() != prev {
-                println!("averaging {} fps", 1f32 / (tt / cnt as f32));
-                cnt = 0;
-                tt = 0f32;
-                prev = (Instant::now() - start).as_secs();
-            }
+            let t_frame_end = Instant::now();
+
             highgui::imshow("Test", &mat).expect("failed to show frame");
             if highgui::wait_key(8).expect("failed to wait user input") != -1 {
                 break;
+            }
+
+            total_frames += 1;
+            total_time += (t_frame_end - t_frame_start).as_secs_f32();
+
+            let seconds_since_start = (Instant::now() - start).as_secs();
+            if seconds_since_start != total_seconds {
+                println!(
+                    "averaging {} fps",
+                    1f32 / (total_time / total_frames as f32)
+                );
+                total_frames = 0;
+                total_time = 0f32;
+                total_seconds = seconds_since_start;
             }
         } else {
             break;

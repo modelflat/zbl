@@ -6,9 +6,11 @@ use windows::{
             Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP},
             Direct3D11::{
                 D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Resource,
-                ID3D11Texture2D, D3D11_BOX, D3D11_CPU_ACCESS_FLAG, D3D11_CPU_ACCESS_READ,
-                D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ,
-                D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
+                ID3D11Texture2D, D3D11_BIND_FLAG, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX,
+                D3D11_CPU_ACCESS_FLAG, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+                D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_RESOURCE_MISC_FLAG,
+                D3D11_RESOURCE_MISC_SHARED, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
+                D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
             },
             Dxgi::{
                 Common::{DXGI_FORMAT, DXGI_SAMPLE_DESC},
@@ -92,6 +94,18 @@ impl D3D {
             D3D11_CPU_ACCESS_FLAG(0)
         };
 
+        let bind_flags = if cpu_access {
+            D3D11_BIND_FLAG(0)
+        } else {
+            D3D11_BIND_SHADER_RESOURCE //| D3D11_BIND_RENDER_TARGET
+        };
+
+        let misc_flags = if cpu_access {
+            D3D11_RESOURCE_MISC_FLAG(0)
+        } else {
+            D3D11_RESOURCE_MISC_SHARED //| D3D11_RESOURCE_MISC_SHARED_NTHANDLE
+        };
+
         let desc = D3D11_TEXTURE2D_DESC {
             Width: width,
             Height: height,
@@ -102,8 +116,8 @@ impl D3D {
                 Count: 1,
                 Quality: 0,
             },
-            BindFlags: 0,
-            MiscFlags: 0,
+            BindFlags: bind_flags.0 as u32,
+            MiscFlags: misc_flags.0 as u32,
             Usage: usage,
             CPUAccessFlags: cpu_access_flags.0 as u32,
         };
