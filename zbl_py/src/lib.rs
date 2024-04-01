@@ -166,7 +166,7 @@ impl Capture {
 
 #[pymodule]
 #[pyo3(name = "zbl")]
-fn zbl(_py: Python<'_>, module: &PyModule) -> PyResult<()> {
+fn zbl(_py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Frame>()?;
     module.add_class::<Capture>()?;
     Ok(())
