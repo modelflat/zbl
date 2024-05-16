@@ -54,6 +54,7 @@ impl Capture {
     pub fn new(
         capturable: Box<dyn Capturable>,
         capture_cursor: bool,
+        is_border_required: bool,
         cpu_access: bool,
     ) -> Result<Self> {
         let d3d = D3D::new()?;
@@ -69,6 +70,7 @@ impl Capture {
 
         let session = frame_pool.CreateCaptureSession(&capture_item)?;
         session.SetIsCursorCaptureEnabled(capture_cursor)?;
+        session.SetIsBorderRequired(is_border_required)?;
 
         let (sender, receiver) = sync_channel(1 << 5);
         frame_pool.FrameArrived(
