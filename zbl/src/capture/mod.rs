@@ -53,7 +53,7 @@ impl Capture {
     /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
     pub fn new(
         capturable: Box<dyn Capturable>,
-        capture_cursor: bool,
+        is_cursor_capture_enabled: bool,
         is_border_required: bool,
         cpu_access: bool,
     ) -> Result<Self> {
@@ -69,7 +69,7 @@ impl Capture {
         )?;
 
         let session = frame_pool.CreateCaptureSession(&capture_item)?;
-        session.SetIsCursorCaptureEnabled(capture_cursor)?;
+        session.SetIsCursorCaptureEnabled(is_cursor_capture_enabled)?;
         session.SetIsBorderRequired(is_border_required)?;
 
         let (sender, receiver) = sync_channel(1 << 5);
