@@ -14,6 +14,3 @@ thiserror = "1"
 [dependencies.pyo3]
 version = "0.21"
 features = ["extension-module"]
-
-[profile.release]
-strip = true

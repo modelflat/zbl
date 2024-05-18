@@ -66,7 +66,9 @@ extern "system" fn object_destroyed_cb(
         };
 
         if has_been_closed {
-            unsafe { UnhookWinEvent(this) };
+            unsafe {
+                let _ = UnhookWinEvent(this);
+            }
         }
     }
 }
@@ -152,50 +154,73 @@ impl Window {
         unsafe { IsWindowVisible(self.handle).as_bool() }
     }
 
+    pub fn is_shell_window(&self) -> bool {
+        self.handle == unsafe { GetShellWindow() }
+    }
+
+    pub fn is_console_window(&self) -> bool {
+        self.handle == unsafe { GetConsoleWindow() }
+    }
+
+    pub fn get_root(&self) -> HWND {
+        unsafe { GetAncestor(self.handle, GA_ROOT) }
+    }
+
+    pub fn is_top_level(&self) -> bool {
+        self.get_root() == self.handle
+    }
+
+    /// https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
+    pub fn get_style(&self) -> i32 {
+        unsafe { GetWindowLongW(self.handle, GWL_STYLE) }
+    }
+
+    /// https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles
+    pub fn get_ex_style(&self) -> i32 {
+        unsafe { GetWindowLongW(self.handle, GWL_EXSTYLE) }
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.get_style() & (WS_DISABLED.0 as i32) == 1
+    }
+
+    pub fn is_tooltip(&self) -> bool {
+        self.get_ex_style() & (WS_EX_TOOLWINDOW.0 as i32) == 1
+    }
+
+    pub fn is_uwp_window(&self) -> bool {
+        self.class_name == "Windows.UI.Core.CoreWindow"
+            || self.class_name == "ApplicationFrameWindow"
+    }
+
+    pub fn is_dwm_cloaked(&self) -> bool {
+        let mut cloaked: u32 = 0;
+        let dwm_attr_cloaked = unsafe {
+            DwmGetWindowAttribute(
+                self.handle,
+                DWMWA_CLOAKED,
+                &mut cloaked as *mut _ as *mut _,
+                std::mem::size_of::<u32>() as u32,
+            )
+        };
+        dwm_attr_cloaked.is_ok() && cloaked == DWM_CLOAKED_SHELL
+    }
+
     pub fn is_capturable(&self) -> bool {
-        unsafe {
-            if self.title.is_empty()
-                || !self.is_visible()
-                || self.handle == GetShellWindow()
-                || self.handle == GetConsoleWindow()
-                || GetAncestor(self.handle, GA_ROOT) != self.handle
-            {
-                return false;
-            }
-        }
-
-        let style = unsafe { GetWindowLongW(self.handle, GWL_STYLE) };
-        if style & (WS_DISABLED.0 as i32) == 1 {
-            return false;
-        }
-
-        // No tooltips
-        let ex_style = unsafe { GetWindowLongW(self.handle, GWL_EXSTYLE) };
-        if ex_style & (WS_EX_TOOLWINDOW.0 as i32) == 1 {
-            return false;
-        }
-
-        // Unfortunate work-around. Not sure how to avoid this.
-        if self.is_known_blocked_window() {
+        if !self.is_visible()
+            || self.is_shell_window()
+            || self.is_console_window()
+            || !self.is_top_level()
+            || self.is_disabled()
+            || self.is_tooltip()
+            || self.is_known_blocked_window()
+        {
             return false;
         }
 
         // Check to see if the self is cloaked if it's a UWP
-        if self.class_name == "Windows.UI.Core.CoreWindow"
-            || self.class_name == "ApplicationFrameWindow"
-        {
-            let mut cloaked: u32 = 0;
-            let dwm_attr_cloaked = unsafe {
-                DwmGetWindowAttribute(
-                    self.handle,
-                    DWMWA_CLOAKED,
-                    &mut cloaked as *mut _ as *mut _,
-                    std::mem::size_of::<u32>() as u32,
-                )
-            };
-            if dwm_attr_cloaked.is_ok() && cloaked == DWM_CLOAKED_SHELL {
-                return false;
-            }
+        if self.is_uwp_window() && self.is_dwm_cloaked() {
+            return false;
         }
 
         true
@@ -205,6 +230,24 @@ impl Window {
         let mut process_id = 0u32;
         unsafe { GetWindowThreadProcessId(self.handle, Some(&mut process_id)) };
         process_id
+    }
+
+    pub fn print_info(&self) {
+        println!("title = {}", self.title);
+        println!("class = {}", self.class_name);
+        println!("is_capturable = {}", self.is_capturable());
+        println!("\tis_visible = {}", self.is_visible());
+        println!("\tis_shell_window = {}", self.is_shell_window());
+        println!("\tis_console_window = {}", self.is_console_window());
+        println!("\tis_top_level = {}", self.is_top_level());
+        println!("\tis_disabled = {}", self.is_disabled());
+        println!("\tis_tooltip = {}", self.is_tooltip());
+        println!("\tis_uwp_window = {}", self.is_uwp_window());
+        println!("\tis_dwm_cloaked = {}", self.is_dwm_cloaked());
+        println!(
+            "\tis_known_blocked_window = {}",
+            self.is_known_blocked_window()
+        );
     }
 }
 
@@ -220,7 +263,7 @@ impl Capturable for Window {
         let mut top_left = POINT::default();
         unsafe {
             GetWindowRect(self.handle, &mut window_rect)?;
-            ClientToScreen(self.handle, &mut top_left);
+            let _ = ClientToScreen(self.handle, &mut top_left);
             GetClientRect(self.handle, &mut client_rect)?;
         }
 
