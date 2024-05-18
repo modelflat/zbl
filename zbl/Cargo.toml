@@ -11,13 +11,15 @@ once_cell = "1"
 log = "0.4"
 
 [dependencies.windows]
-version = "0.54"
+version = "0.56"
 features = [
     "Foundation",
     "Graphics_Capture",
     "Graphics_DirectX_Direct3D11",
     "Win32_Foundation",
     "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D9",
+    "Win32_Graphics_Direct3D10",
     "Win32_Graphics_Direct3D11",
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Dxgi_Common",
@@ -34,7 +36,6 @@ features = [
 clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies.opencv]
-git = "https://github.com/modelflat/opencv-rust"
-branch = "directx-interop"
+version = "0.91"
 default-features = false
-features = ["highgui", "directx"]
+features = ["highgui"]

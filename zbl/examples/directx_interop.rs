@@ -29,10 +29,9 @@ fn main() {
     };
 
     let mut capture = Capture::new(target, true, false).expect("failed to initialize capture");
-    unsafe {
-        opencv::core::initialize_context_from_d3d11_device(&capture.d3d.device)
-            .expect("initialize d3d11")
-    };
+
+    opencv::core::initialize_context_from_d3d11_device(&mut capture.d3d.device)
+        .expect("initialize d3d11");
 
     capture.start().expect("failed to start capture");
 
@@ -46,11 +45,9 @@ fn main() {
     let mut gpu_mat = UMat::new_def();
     loop {
         let t_frame_start = Instant::now();
-        if let Some(frame) = capture.grab().expect("failed to get frame") {
-            unsafe {
-                opencv::core::convert_from_d3d11_texture_2d(&frame.texture, &mut gpu_mat)
-                    .expect("convert from d3d11 texture")
-            }
+        if let Some(mut frame) = capture.grab().expect("failed to get frame") {
+            opencv::core::convert_from_d3d11_texture_2d(&mut frame.texture, &mut gpu_mat)
+                .expect("convert from d3d11 texture");
             let t_frame_end = Instant::now();
 
             highgui::imshow("Test", &gpu_mat).expect("failed to show frame");

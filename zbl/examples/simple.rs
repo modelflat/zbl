@@ -5,6 +5,7 @@ use opencv::{
     core::{Mat, Size, CV_8UC4},
     highgui,
 };
+use windows::Win32::Foundation::HWND;
 use zbl::{Capturable, Capture, Display, Window};
 
 #[derive(Parser, Debug)]
@@ -12,6 +13,8 @@ use zbl::{Capturable, Capture, Display, Window};
 struct Args {
     #[clap(long)]
     window_name: Option<String>,
+    #[clap(long)]
+    window_handle: Option<isize>,
     #[clap(long)]
     display_id: Option<usize>,
 }
@@ -23,6 +26,11 @@ fn main() {
 
     let target = if let Some(window_name) = args.window_name {
         let window = Window::find_first(&window_name).expect("failed to find window");
+        window.print_info();
+        Box::new(window) as Box<dyn Capturable>
+    } else if let Some(window_handle) = args.window_handle {
+        let window = Window::new(HWND(window_handle));
+        window.print_info();
         Box::new(window) as Box<dyn Capturable>
     } else if let Some(display_id) = args.display_id {
         let display = Display::find_by_id(display_id).expect("failed to find display");
@@ -47,7 +55,7 @@ fn main() {
         if let Some(frame) = capture.grab().expect("failed to get frame") {
             let desc = frame.desc();
             let mat = unsafe {
-                Mat::new_size_with_data(
+                Mat::new_size_with_data_unsafe(
                     Size::new(desc.Width as i32, desc.Height as i32),
                     CV_8UC4,
                     frame.mapped_ptr.pData,
