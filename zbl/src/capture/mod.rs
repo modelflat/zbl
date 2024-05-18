@@ -70,7 +70,14 @@ impl Capture {
 
         let session = frame_pool.CreateCaptureSession(&capture_item)?;
         session.SetIsCursorCaptureEnabled(is_cursor_capture_enabled)?;
-        session.SetIsBorderRequired(is_border_required)?;
+        if !is_border_required {
+            if let Err(e) = session.SetIsBorderRequired(is_border_required) {
+                log::warn!(
+                    "got '{}' when trying to disable the capture border - see https://github.com/modelflat/zbl/pull/4 for more info",
+                    e
+                );
+            }
+        }
 
         let (sender, receiver) = sync_channel(1 << 5);
         frame_pool.FrameArrived(
