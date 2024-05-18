@@ -31,7 +31,7 @@ fn main() {
         panic!("either --window-name or --display-id should be set!");
     };
 
-    let mut capture = Capture::new(target, true, true).expect("failed to initialize capture");
+    let mut capture = Capture::new(target, false, false, true).expect("failed to initialize capture");
 
     capture.start().expect("failed to start capture");
 
