@@ -53,7 +53,8 @@ impl Capture {
     /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
     pub fn new(
         capturable: Box<dyn Capturable>,
-        capture_cursor: bool,
+        is_cursor_capture_enabled: bool,
+        is_border_required: bool,
         cpu_access: bool,
     ) -> Result<Self> {
         let d3d = D3D::new()?;
@@ -68,7 +69,15 @@ impl Capture {
         )?;
 
         let session = frame_pool.CreateCaptureSession(&capture_item)?;
-        session.SetIsCursorCaptureEnabled(capture_cursor)?;
+        session.SetIsCursorCaptureEnabled(is_cursor_capture_enabled)?;
+        if !is_border_required {
+            if let Err(e) = session.SetIsBorderRequired(is_border_required) {
+                log::warn!(
+                    "got '{}' when trying to disable the capture border - see https://github.com/modelflat/zbl/pull/4 for more info",
+                    e
+                );
+            }
+        }
 
         let (sender, receiver) = sync_channel(1 << 5);
         frame_pool.FrameArrived(

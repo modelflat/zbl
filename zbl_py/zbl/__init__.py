@@ -31,11 +31,12 @@ class Capture:
         window_name: Optional[str] = None,
         window_handle: Optional[str] = None,
         display_id: Optional[int] = None,
-        capture_cursor: bool = False,
+        is_cursor_capture_enabled: bool = False,
+        is_border_required: bool = True,
         use_staging_texture: bool = True,
     ):
         self._inner = _NativeCapture(
-            window_name, window_handle, display_id, capture_cursor, use_staging_texture
+            window_name, window_handle, display_id, is_cursor_capture_enabled, is_border_required, use_staging_texture
         )
 
     @property
@@ -71,7 +72,8 @@ def show(args):
         with Capture(
             window_name=args.window_name,
             display_id=args.display_id,
-            capture_cursor=args.capture_cursor,
+            is_cursor_capture_enabled=args.is_cursor_capture_enabled,
+            is_border_required=args.is_border_required,
         ) as cap:
             t = perf_counter()
             last_print = perf_counter()
