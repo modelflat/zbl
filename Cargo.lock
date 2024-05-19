@@ -665,7 +665,7 @@ checksum = "bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0"
 
 [[package]]
 name = "zbl"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "clap",
  "log",
@@ -676,7 +676,7 @@ dependencies = [
 
 [[package]]
 name = "zbl_py"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "pyo3",
  "thiserror",

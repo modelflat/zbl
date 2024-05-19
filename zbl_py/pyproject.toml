@@ -1,7 +1,7 @@
 [project]
 name = "zbl"
 description = "real-time window capture library based on D3D11 and Windows.Graphics.Capture"
-version = "0.4.0"
+version = "0.5.0"
 readme = "../README.md"
 requires-python = ">=3.7"
 license = { file = "../LICENSE.txt" }
