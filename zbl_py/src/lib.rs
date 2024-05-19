@@ -130,7 +130,7 @@ impl Capture {
         cpu_access: Option<bool>,
     ) -> PyResult<Self> {
         let is_cursor_capture_enabled = is_cursor_capture_enabled.unwrap_or(false);
-        let is_border_required = is_border_required.unwrap_or(false);
+        let is_border_required = is_border_required.unwrap_or(true);
         let cpu_access = cpu_access.unwrap_or(true);
         if let Some(name) = window_name {
             Ok(Self::from_window_name(name, is_cursor_capture_enabled, is_border_required, cpu_access)?)

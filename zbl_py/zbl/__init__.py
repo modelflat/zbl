@@ -32,7 +32,7 @@ class Capture:
         window_handle: Optional[str] = None,
         display_id: Optional[int] = None,
         is_cursor_capture_enabled: bool = False,
-        is_border_required: bool = False,
+        is_border_required: bool = True,
         use_staging_texture: bool = True,
     ):
         self._inner = _NativeCapture(
