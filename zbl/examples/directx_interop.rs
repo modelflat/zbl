@@ -28,11 +28,10 @@ fn main() {
         panic!("either --window-name or --display-id should be set!");
     };
 
-    let mut capture = Capture::new(target, false, true, false).expect("failed to initialize capture");
-    unsafe {
-        opencv::core::initialize_context_from_d3d11_device(&mut capture.d3d.device)
-            .expect("initialize d3d11")
-    };
+    let mut capture =
+        Capture::new(target, false, true, false).expect("failed to initialize capture");
+    opencv::core::initialize_context_from_d3d11_device(&mut capture.d3d.device)
+        .expect("initialize d3d11");
 
     capture.start().expect("failed to start capture");
 

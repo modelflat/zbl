@@ -66,11 +66,21 @@ impl Capture {
         cpu_access: bool,
     ) -> Result<Self> {
         ::zbl::init();
-        let capture = ::zbl::Capture::new(capturable, is_cursor_capture_enabled, is_border_required, cpu_access)?;
+        let capture = ::zbl::Capture::new(
+            capturable,
+            is_cursor_capture_enabled,
+            is_border_required,
+            cpu_access,
+        )?;
         Ok(Self { inner: capture })
     }
 
-    pub fn from_window_name(name: &str, is_cursor_capture_enabled: bool, is_border_required: bool, cpu_access: bool) -> Result<Self> {
+    pub fn from_window_name(
+        name: &str,
+        is_cursor_capture_enabled: bool,
+        is_border_required: bool,
+        cpu_access: bool,
+    ) -> Result<Self> {
         let window = ::zbl::Window::find_first(name)
             .ok_or_else(|| Error::WindowNotFoundError(name.to_string()))?;
         Self::from_capturable(
@@ -81,7 +91,12 @@ impl Capture {
         )
     }
 
-    pub fn from_display_id(id: usize, is_cursor_capture_enabled: bool, is_border_required: bool, cpu_access: bool) -> Result<Self> {
+    pub fn from_display_id(
+        id: usize,
+        is_cursor_capture_enabled: bool,
+        is_border_required: bool,
+        cpu_access: bool,
+    ) -> Result<Self> {
         let display = ::zbl::Display::find_by_id(id)?;
         Self::from_capturable(
             Box::new(display) as Box<dyn ::zbl::Capturable>,
@@ -121,19 +136,29 @@ impl Capture {
 #[pymethods]
 impl Capture {
     #[new]
+    #[pyo3(signature = (
+        window_name=None,
+        window_handle=None,
+        display_id=None,
+        is_cursor_capture_enabled=false,
+        is_border_required=true,
+        cpu_access=true
+    ))]
     pub fn new(
         window_name: Option<&str>,
         window_handle: Option<i32>,
         display_id: Option<i32>,
-        is_cursor_capture_enabled: Option<bool>,
-        is_border_required: Option<bool>,
-        cpu_access: Option<bool>,
+        is_cursor_capture_enabled: bool,
+        is_border_required: bool,
+        cpu_access: bool,
     ) -> PyResult<Self> {
-        let is_cursor_capture_enabled = is_cursor_capture_enabled.unwrap_or(false);
-        let is_border_required = is_border_required.unwrap_or(true);
-        let cpu_access = cpu_access.unwrap_or(true);
         if let Some(name) = window_name {
-            Ok(Self::from_window_name(name, is_cursor_capture_enabled, is_border_required, cpu_access)?)
+            Ok(Self::from_window_name(
+                name,
+                is_cursor_capture_enabled,
+                is_border_required,
+                cpu_access,
+            )?)
         } else if let Some(handle) = window_handle {
             Ok(Self::from_capturable(
                 Box::new(::zbl::Window::new(HWND(handle as isize))) as Box<dyn ::zbl::Capturable>,
