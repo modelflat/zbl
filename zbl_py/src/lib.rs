@@ -66,12 +66,11 @@ impl Capture {
         cpu_access: bool,
     ) -> Result<Self> {
         ::zbl::init();
-        let capture = ::zbl::Capture::new(
-            capturable,
-            is_cursor_capture_enabled,
-            is_border_required,
-            cpu_access,
-        )?;
+        let capture = ::zbl::CaptureBuilder::new(capturable)
+            .set_is_cursor_capture_enabled(is_cursor_capture_enabled)
+            .set_is_border_required(is_border_required)
+            .set_cpu_access(cpu_access)
+            .build()?;
         Ok(Self { inner: capture })
     }
 
@@ -117,7 +116,7 @@ impl Capture {
                 width: desc.Width,
                 height: desc.Height,
                 row_pitch: frame.mapped_ptr.RowPitch,
-                ptr: if self.inner.cpu_access {
+                ptr: if self.inner.has_cpu_access() {
                     frame.mapped_ptr.pData
                 } else {
                     frame.texture.as_raw()

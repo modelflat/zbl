@@ -6,7 +6,7 @@ use opencv::{
     highgui,
 };
 use windows::Win32::Foundation::HWND;
-use zbl::{Capturable, Capture, Display, Window};
+use zbl::{capture::CaptureBuilder, Capturable, Display, Window};
 
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -39,8 +39,9 @@ fn main() {
         panic!("either --window-name or --display-id should be set!");
     };
 
-    let mut capture =
-        Capture::new(target, false, true, true).expect("failed to initialize capture");
+    let mut capture = CaptureBuilder::new(target)
+        .build()
+        .expect("failed to initialize capture");
 
     capture.start().expect("failed to start capture");
 

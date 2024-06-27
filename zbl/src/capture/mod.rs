@@ -32,15 +32,58 @@ pub trait Capturable {
     fn get_raw_handle(&self) -> isize;
 }
 
+pub struct CaptureBuilder {
+    capturable: Box<dyn Capturable>,
+    is_cursor_capture_enabled: bool,
+    is_border_required: bool,
+    cpu_access: bool,
+}
+
+impl CaptureBuilder {
+    pub fn new(capturable: Box<dyn Capturable>) -> Self {
+        Self {
+            capturable,
+            is_cursor_capture_enabled: false,
+            is_border_required: true,
+            cpu_access: true,
+        }
+    }
+
+    pub fn set_is_cursor_capture_enabled(mut self, val: bool) -> Self {
+        self.is_cursor_capture_enabled = val;
+        self
+    }
+
+    pub fn set_is_border_required(mut self, val: bool) -> Self {
+        self.is_border_required = val;
+        self
+    }
+
+    pub fn set_cpu_access(mut self, val: bool) -> Self {
+        self.cpu_access = val;
+        self
+    }
+
+    pub fn build(self) -> Result<Capture> {
+        Capture::new(
+            self.capturable,
+            self.is_cursor_capture_enabled,
+            self.is_border_required,
+            self.cpu_access,
+        )
+    }
+}
+
+/// Represents a Capture session.
 pub struct Capture {
-    pub d3d: D3D,
+    d3d: D3D,
     capturable: Box<dyn Capturable>,
     capture_box: D3D11_BOX,
     capture_done_signal: Receiver<()>,
     frame_pool: Direct3D11CaptureFramePool,
     frame_source: Receiver<Option<Direct3D11CaptureFrame>>,
     session: GraphicsCaptureSession,
-    pub cpu_access: bool,
+    cpu_access: bool,
     staging_texture: Option<ID3D11Texture2D>,
     content_size: SizeInt32,
     stopped: bool,
@@ -51,7 +94,7 @@ impl Capture {
     /// frame pool / capture session.
     ///
     /// Note that this will not start capturing yet. Call `start()` to actually start receiving frames.
-    pub fn new(
+    pub(crate) fn new(
         capturable: Box<dyn Capturable>,
         is_cursor_capture_enabled: bool,
         is_border_required: bool,
@@ -117,6 +160,16 @@ impl Capture {
             content_size: Default::default(),
             stopped: false,
         })
+    }
+
+    /// Get D3D contexts
+    pub fn d3d(&mut self) -> &mut D3D {
+        &mut self.d3d
+    }
+
+    /// Whether the backing buffer of this instance of `Capture` is CPU-accessible.
+    pub fn has_cpu_access(&self) -> bool {
+        self.cpu_access
     }
 
     /// Get attached capturable.

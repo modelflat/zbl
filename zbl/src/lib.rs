@@ -3,7 +3,7 @@ pub mod d3d;
 pub mod frame;
 pub mod util;
 
-pub use capture::{display::Display, window::Window, Capturable, Capture};
+pub use capture::{display::Display, window::Window, Capturable, Capture, CaptureBuilder};
 pub use frame::Frame;
 
 // re-export winapi
