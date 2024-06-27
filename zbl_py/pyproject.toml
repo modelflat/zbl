@@ -28,5 +28,5 @@ Repository = "https://github.com/modelflat/zbl"
 example = ["opencv-python~=4.6.0"]
 
 [build-system]
-requires = ["maturin"]
+requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
