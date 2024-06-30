@@ -20,7 +20,6 @@ def frame_to_numpy_array(frame: Frame) -> numpy.ndarray:
     if frame.row_pitch == frame.width * 4:
         return arr.reshape(frame.height, frame.width, 4)
     else:
-        # TODO copy to avoid slow access?
         return arr[:, : frame.width * 4].reshape((frame.height, frame.width, 4))
 
 
