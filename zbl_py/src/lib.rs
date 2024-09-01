@@ -160,7 +160,8 @@ impl Capture {
             )?)
         } else if let Some(handle) = window_handle {
             Ok(Self::from_capturable(
-                Box::new(::zbl::Window::new(HWND(handle as isize))) as Box<dyn ::zbl::Capturable>,
+                Box::new(::zbl::Window::new(HWND(handle as *mut c_void)))
+                    as Box<dyn ::zbl::Capturable>,
                 is_cursor_capture_enabled,
                 is_border_required,
                 cpu_access,

@@ -50,8 +50,8 @@ extern "system" fn object_destroyed_cb(
 ) {
     if id_object == 0 && id_child == 0 && handle != HWND::default() {
         let has_been_closed = if let Ok(handles) = OBJECT_DESTROYED_USER_DATA.read() {
-            if let Some((window_handle, tx)) = handles.get(&this.0) {
-                if *window_handle == handle.0 {
+            if let Some((window_handle, tx)) = handles.get(&(this.0 as isize)) {
+                if *window_handle == handle.0 as isize {
                     tx.send(()).ok();
                     true
                 } else {
@@ -299,12 +299,12 @@ impl Capturable for Window {
             )
         };
         if let Ok(mut handles) = OBJECT_DESTROYED_USER_DATA.write() {
-            handles.insert(hook_id.0, (self.handle.0, sender));
+            handles.insert(hook_id.0 as isize, (self.handle.0 as isize, sender));
         }
         receiver
     }
 
     fn get_raw_handle(&self) -> isize {
-        self.handle.0
+        self.handle.0 as isize
     }
 }

@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{os::raw::c_void, time::Instant};
 
 use clap::Parser;
 use opencv::{
@@ -29,7 +29,7 @@ fn main() {
         window.print_info();
         Box::new(window) as Box<dyn Capturable>
     } else if let Some(window_handle) = args.window_handle {
-        let window = Window::new(HWND(window_handle));
+        let window = Window::new(HWND(window_handle as *mut c_void));
         window.print_info();
         Box::new(window) as Box<dyn Capturable>
     } else if let Some(display_id) = args.display_id {

@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    ptr::null_mut,
     sync::{
         mpsc::{sync_channel, Receiver, SyncSender},
         RwLock,
@@ -47,7 +48,13 @@ extern "system" fn enum_monitor(monitor: HMONITOR, _: HDC, _: *mut RECT, state: 
 fn enumerate_displays() -> Result<Box<Vec<Result<Display>>>> {
     let displays = Box::into_raw(Default::default());
     unsafe {
-        EnumDisplayMonitors(HDC(0), None, Some(enum_monitor), LPARAM(displays as isize)).ok()?;
+        EnumDisplayMonitors(
+            HDC(null_mut()),
+            None,
+            Some(enum_monitor),
+            LPARAM(displays as isize),
+        )
+        .ok()?;
         Ok(Box::from_raw(displays))
     }
 }
@@ -104,11 +111,11 @@ impl Capturable for Display {
         OBJECT_DESTROYED_USER_DATA
             .write()
             .unwrap()
-            .insert(self.handle.0, (self.handle.0, sender));
+            .insert(self.handle.0 as isize, (self.handle.0 as isize, sender));
         receiver
     }
 
     fn get_raw_handle(&self) -> isize {
-        self.handle.0
+        self.handle.0 as isize
     }
 }
