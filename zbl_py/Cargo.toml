@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 zbl = { path = "../zbl", default-features = false }
-thiserror = "1"
+thiserror = "2"
 
 [dependencies.pyo3]
-version = "0.22"
+version = "0.23"
 features = ["extension-module"]

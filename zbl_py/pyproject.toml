@@ -1,9 +1,9 @@
 [project]
 name = "zbl"
 description = "real-time window capture library based on D3D11 and Windows.Graphics.Capture"
-version = "0.6.1"
+version = "0.6.2"
 readme = "../README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "../LICENSE.txt" }
 keywords = ["windows", "d3d11", "window-capture", "graphics-capture", "cv"]
 dependencies = ["numpy"]
@@ -12,7 +12,6 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
