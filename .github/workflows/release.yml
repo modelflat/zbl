@@ -40,6 +40,6 @@ jobs:
         files: dist/*
     - name: Publish package to PyPI
       if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@cbd6d01d855e02aab0908c7709d5c0ddc88c617a
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
