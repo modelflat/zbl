@@ -2,6 +2,7 @@ use windows::{
     core::{Interface, Result},
     Graphics::DirectX::Direct3D11::IDirect3DDevice,
     Win32::{
+        Foundation::HMODULE,
         Graphics::{
             Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP},
             Direct3D11::{
@@ -28,7 +29,7 @@ fn create_d3d_device() -> Result<ID3D11Device> {
             D3D11CreateDevice(
                 None,
                 driver_type,
-                None,
+                HMODULE::default(),
                 D3D11_CREATE_DEVICE_BGRA_SUPPORT,
                 None,
                 D3D11_SDK_VERSION,

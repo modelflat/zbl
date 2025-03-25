@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    ptr::null_mut,
     sync::{
         mpsc::{sync_channel, Receiver, SyncSender},
         RwLock,
@@ -9,10 +8,10 @@ use std::{
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::{factory, Result},
+    core::{factory, Result, BOOL},
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
-        Foundation::{BOOL, LPARAM, RECT},
+        Foundation::{LPARAM, RECT},
         Graphics::{
             Direct3D11::D3D11_BOX,
             Gdi::{EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFOEXW},
@@ -48,13 +47,7 @@ extern "system" fn enum_monitor(monitor: HMONITOR, _: HDC, _: *mut RECT, state: 
 fn enumerate_displays() -> Result<Box<Vec<Result<Display>>>> {
     let displays = Box::into_raw(Default::default());
     unsafe {
-        EnumDisplayMonitors(
-            HDC(null_mut()),
-            None,
-            Some(enum_monitor),
-            LPARAM(displays as isize),
-        )
-        .ok()?;
+        EnumDisplayMonitors(None, None, Some(enum_monitor), LPARAM(displays as isize)).ok()?;
         Ok(Box::from_raw(displays))
     }
 }

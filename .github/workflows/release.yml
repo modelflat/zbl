@@ -3,43 +3,43 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch: {}
 
 jobs:
   windows:
     runs-on: windows-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        rust-toolchain: 1.83.0
-        command: build
-        args: -m zbl_py/Cargo.toml --release -o dist --find-interpreter
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          rust-toolchain: 1.85.0
+          command: build
+          args: -m zbl_py/Cargo.toml --release -o dist --find-interpreter
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
   publish:
     needs:
-    - windows
+      - windows
     runs-on: ubuntu-latest
     steps:
-    - name: Get artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: dist/*
-    - name: Publish package to PyPI
-      if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@cbd6d01d855e02aab0908c7709d5c0ddc88c617a
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Get artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/*
+      - name: Publish package to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@cbd6d01d855e02aab0908c7709d5c0ddc88c617a
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

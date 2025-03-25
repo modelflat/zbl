@@ -46,10 +46,6 @@ Note: if you are getting OpenCV build errors when building the example, check ou
 Both are very slow at the time of writing. `mss` tops at 30-50 fps in a tight loop, `pyautogui` is
 even slower than that. `zbl` is able to capture an order of magnitude faster (at 500-700 fps). This allows a lot more time for the actual processing.
 
-## Plans
-
-- (in progress) Integration with `GpuMat`s & full on-GPU processing
-
 ## Credits
 
 `zbl` is heavily inspired by [screenshot-rs](https://github.com/robmikh/screenshot-rs).
