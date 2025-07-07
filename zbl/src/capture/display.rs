@@ -8,10 +8,10 @@ use std::{
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::{factory, Result, BOOL},
+    core::{factory, Result},
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
-        Foundation::{LPARAM, RECT},
+        Foundation::{BOOL, LPARAM, RECT},
         Graphics::{
             Direct3D11::D3D11_BOX,
             Gdi::{EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFOEXW},

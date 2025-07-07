@@ -8,10 +8,10 @@ use std::{
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::{Result, BOOL},
+    core::Result,
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
-        Foundation::{HWND, LPARAM, POINT, RECT},
+        Foundation::{BOOL, HWND, LPARAM, POINT, RECT},
         Graphics::{
             Direct3D11::D3D11_BOX,
             Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWM_CLOAKED_SHELL},

@@ -1,7 +1,7 @@
 [package]
 name = "zbl"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "zbl"
@@ -11,7 +11,7 @@ once_cell = "1"
 log = "0.4"
 
 [dependencies.windows]
-version = "0.61"  # NOTE: this version has to correspond to the version opencv-rust is using
+version = "0.59"  # NOTE: this version has to correspond to the version opencv-rust is using
 features = [
     "Foundation",
     "Graphics_Capture",
@@ -36,6 +36,6 @@ features = [
 clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies.opencv]
-version = "0.94.3"
+version = "0.95.0"
 default-features = false
 features = ["highgui"]
