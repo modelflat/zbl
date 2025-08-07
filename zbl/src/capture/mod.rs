@@ -1,10 +1,9 @@
 pub mod display;
 pub mod window;
 
-use std::sync::mpsc::{sync_channel, Receiver, TryRecvError, TrySendError};
+use std::sync::mpsc::{Receiver, TryRecvError, TrySendError, sync_channel};
 
 use windows::{
-    core::{IInspectable, Interface, Result},
     Foundation::TypedEventHandler,
     Graphics::{
         Capture::{
@@ -15,9 +14,10 @@ use windows::{
         SizeInt32,
     },
     Win32::{
-        Graphics::Direct3D11::{ID3D11Texture2D, D3D11_BOX, D3D11_TEXTURE2D_DESC},
+        Graphics::Direct3D11::{D3D11_BOX, D3D11_TEXTURE2D_DESC, ID3D11Texture2D},
         System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess,
     },
+    core::{IInspectable, Interface, Result},
 };
 
 use crate::{d3d::D3D, frame::Frame};
@@ -30,6 +30,12 @@ pub trait Capturable {
     fn get_close_notification_channel(&self) -> Receiver<()>;
 
     fn get_raw_handle(&self) -> isize;
+}
+
+pub enum MaybeFrame {
+    Some(Frame),
+    Pending,
+    None,
 }
 
 pub struct CaptureBuilder {
@@ -189,34 +195,42 @@ impl Capture {
     ///
     /// Returns:
     /// * `Ok(Some(...))` if there is a frame and it's been successfully captured;
-    /// * `Ok(None)` if no frames can be received (e.g. when the window was closed).
+    /// * `Ok(None)` if no frames can be received anymore (e.g. when the window was closed).
     /// * `Err(...)` if an error has occured while capturing a frame.
     pub fn grab(&mut self) -> Result<Option<Frame>> {
-        match self.receive_next_frame()? {
-            Some(frame) => {
-                let original_texture: ID3D11Texture2D =
-                    get_dxgi_interface_from_object(&frame.Surface()?)?;
+        loop {
+            match self.try_grab()? {
+                MaybeFrame::Some(f) => return Ok(Some(f)),
+                MaybeFrame::Pending => {}
+                MaybeFrame::None => return Ok(None),
+            }
+        }
+    }
 
-                // TODO can we avoid copying data into staging texture when DirectX interop is enabled?
-                // currently it doesn't work because of the following error:
-                //   OpenCL: clCreateFromD3D11Texture2DNV failed in function 'cv::directx::__convertFromD3D11Texture2DNV'
-                // which seems to be in turn caused by presence of D3D11_RESOURCE_MISC_SHARED_NTHANDLE misc flag in the
-                // original frame texture
-                self.copy_to_staging(&original_texture)?;
-
-                let staging_texture = self
-                    .staging_texture
-                    .clone()
-                    .expect("staging texture should be initialized at this point");
-
-                if self.cpu_access {
-                    let ptr = self.d3d.map_unmap_texture(&staging_texture)?;
-                    Ok(Some(Frame::new_mapped(staging_texture, ptr)))
+    /// Try grabbing current capture frame.
+    ///
+    /// Returns:
+    /// * `Ok(MaybeFrame::Some(frame))` if there is a frame and it's been successfully captured;
+    /// * `Ok(MaybeFrame::Pending)` if no frames are ready yet, but the capture isn't stopped yet.
+    /// * `Ok(MaybeFrame::None)` if no frames can be received anymore (e.g. when the window was closed).
+    /// * `Err(...)` if an error has occured while capturing a frame.
+    pub fn try_grab(&mut self) -> Result<MaybeFrame> {
+        if self.stopped {
+            return Ok(MaybeFrame::None);
+        }
+        match self.frame_source.try_recv() {
+            Ok(Some(f)) => return Ok(MaybeFrame::Some(self.convert_to_frame(f)?)),
+            Err(TryRecvError::Empty) => {
+                if let Ok(()) | Err(TryRecvError::Disconnected) =
+                    self.capture_done_signal.try_recv()
+                {
+                    self.stop()?;
+                    Ok(MaybeFrame::None)
                 } else {
-                    Ok(Some(Frame::new(staging_texture)))
+                    Ok(MaybeFrame::Pending)
                 }
             }
-            None => Ok(None),
+            Ok(None) | Err(TryRecvError::Disconnected) => return Ok(MaybeFrame::None),
         }
     }
 
@@ -250,24 +264,26 @@ impl Capture {
         Ok(())
     }
 
-    fn receive_next_frame(&mut self) -> Result<Option<Direct3D11CaptureFrame>> {
-        if self.stopped {
-            return Ok(None);
-        }
-        loop {
-            match self.frame_source.try_recv() {
-                Ok(Some(f)) => return Ok(Some(f)),
-                Err(TryRecvError::Empty) => {
-                    // TODO busy loop? so uncivilized
-                    if let Ok(()) | Err(TryRecvError::Disconnected) =
-                        self.capture_done_signal.try_recv()
-                    {
-                        self.stop()?;
-                        return Ok(None);
-                    }
-                }
-                Ok(None) | Err(TryRecvError::Disconnected) => return Ok(None),
-            }
+    fn convert_to_frame(&mut self, frame: Direct3D11CaptureFrame) -> Result<Frame> {
+        let original_texture: ID3D11Texture2D = get_dxgi_interface_from_object(&frame.Surface()?)?;
+
+        // TODO can we avoid copying data into staging texture when DirectX interop is enabled?
+        // currently it doesn't work because of the following error:
+        //   OpenCL: clCreateFromD3D11Texture2DNV failed in function 'cv::directx::__convertFromD3D11Texture2DNV'
+        // which seems to be in turn caused by presence of D3D11_RESOURCE_MISC_SHARED_NTHANDLE misc flag in the
+        // original frame texture
+        self.copy_to_staging(&original_texture)?;
+
+        let staging_texture = self
+            .staging_texture
+            .clone()
+            .expect("staging texture should be initialized at this point");
+
+        if self.cpu_access {
+            let ptr = self.d3d.map_unmap_texture(&staging_texture)?;
+            Ok(Frame::new_mapped(staging_texture, ptr))
+        } else {
+            Ok(Frame::new(staging_texture))
         }
     }
 
