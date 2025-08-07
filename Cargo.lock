@@ -729,7 +729,7 @@ dependencies = [
 
 [[package]]
 name = "zbl"
-version = "0.6.4"
+version = "0.7.0"
 dependencies = [
  "clap",
  "log",
@@ -740,7 +740,7 @@ dependencies = [
 
 [[package]]
 name = "zbl_py"
-version = "0.6.4"
+version = "0.7.0"
 dependencies = [
  "pyo3",
  "thiserror",

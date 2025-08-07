@@ -1,5 +1,11 @@
-use ::zbl::windows::{core::Interface, Win32::Foundation::HWND};
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use ::zbl::{
+    capture::MaybeFrame,
+    windows::{Win32::Foundation::HWND, core::Interface},
+};
+use pyo3::{
+    exceptions::{PyRuntimeError, PyStopIteration},
+    prelude::*,
+};
 use std::ffi::c_void;
 
 #[derive(thiserror::Error, Debug)]
@@ -109,21 +115,25 @@ impl Capture {
         Ok(self.inner.start()?)
     }
 
-    fn _grab(&mut self) -> Result<Option<Frame>> {
-        if let Some(frame) = self.inner.grab()? {
-            let desc = frame.desc();
-            Ok(Some(Frame {
-                width: desc.Width,
-                height: desc.Height,
-                row_pitch: frame.mapped_ptr.RowPitch,
-                ptr: if self.inner.has_cpu_access() {
-                    frame.mapped_ptr.pData
-                } else {
-                    frame.texture.as_raw()
-                },
-            }))
-        } else {
-            Ok(None)
+    fn _grab(&mut self) -> Result<Option<::zbl::Frame>> {
+        Ok(self.inner.grab()?)
+    }
+
+    fn _try_grab(&mut self) -> Result<MaybeFrame> {
+        Ok(self.inner.try_grab()?)
+    }
+
+    fn _convert_frame(&self, frame: ::zbl::Frame) -> Frame {
+        let desc = frame.desc();
+        Frame {
+            width: desc.Width,
+            height: desc.Height,
+            row_pitch: frame.mapped_ptr.RowPitch,
+            ptr: if self.inner.has_cpu_access() {
+                frame.mapped_ptr.pData
+            } else {
+                frame.texture.as_raw()
+            },
         }
     }
 
@@ -188,7 +198,18 @@ impl Capture {
     }
 
     pub fn grab(&mut self) -> PyResult<Option<Frame>> {
-        Ok(self._grab()?)
+        match self._grab()? {
+            Some(f) => Ok(Some(self._convert_frame(f))),
+            None => Err(PyStopIteration::new_err("no more frames")),
+        }
+    }
+
+    pub fn try_grab(&mut self) -> PyResult<Option<Frame>> {
+        match self._try_grab()? {
+            MaybeFrame::Some(f) => Ok(Some(self._convert_frame(f))),
+            MaybeFrame::Pending => Ok(None),
+            MaybeFrame::None => Err(PyStopIteration::new_err("no more frames")),
+        }
     }
 
     pub fn stop(&mut self) -> PyResult<()> {
