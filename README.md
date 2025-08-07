@@ -22,14 +22,14 @@ Alternatively, you can install suitable wheel from [releases page](https://githu
 from zbl import Capture
 
 with Capture(window_name='visual studio code') as cap:
-    frame = next(cap.frames())
-    print(frame.shape)
+    # grab a single frame (numpy.ndarray) and print its shape
+    print(cap.grab().shape)
 ```
 
-The snippet above will capture a window which title contains the string `visual studio code`, take one frame (which is represented as a `numpy` array) and print its shape.
+The snippet above will capture a window which title contains the string `visual studio code`,
+grab one frame and print its shape.
 
-See `Capture` constructor for more options. It is possible to capture the entire screen using `display_id` argument,
-for example.
+See [Capture](https://github.com/modelflat/zbl/blob/master/zbl_py/zbl/__init__.py) for other API methods.
 
 To run an example using OpenCV's `highgui`:
 

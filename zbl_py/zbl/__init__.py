@@ -46,7 +46,13 @@ class Capture:
     def handle(self) -> int:
         return self._inner.handle()
 
-    def grab(self) -> Frame:
+    def grab(self) -> numpy.ndarray:
+        """
+        Same as `grab_raw`, but converts captured frame to numpy array.
+        """
+        return frame_to_numpy_array(self.grab_raw())
+
+    def grab_raw(self) -> Frame:
         """
         Grab the next frame from the capture.
 
@@ -55,7 +61,16 @@ class Capture:
         """
         return self._inner.grab()
 
-    def try_grab(self) -> Optional[Frame]:
+    def try_grab(self) -> Optional[numpy.ndarray]:
+        """
+        Same as `try_grab_raw`, but converts captured frame to numpy array.
+        """
+        frame = self.try_grab_raw()
+        if frame is None:
+            return None
+        return frame_to_numpy_array(frame)
+
+    def try_grab_raw(self) -> Optional[Frame]:
         """
         Try grabbing the next frame from the capture.
 
@@ -64,16 +79,28 @@ class Capture:
         """
         return self._inner.try_grab()
 
-    def raw_frames(self) -> Iterator[Frame]:
+    def frames(self) -> Iterator[numpy.ndarray]:
+        """
+        Returns an iterator over numpy frames in this capture. 
+        """
+        for frame in self.frames_raw():
+            yield frame_to_numpy_array(frame)
+
+    def frames_raw(self) -> Iterator[Frame]:
+        """
+        Returns an iterator over frames in this capture.
+        """
         while True:
             try:
-                yield self.grab()
-            except StopIteration:
-                break
+                yield self.grab_raw()
+            except StopIteration as _:
+                return
 
-    def frames(self) -> Iterator[numpy.ndarray]:
-        for frame in self.raw_frames():
-            yield frame_to_numpy_array(frame)
+    def raw_frames(self) -> Iterator[Frame]:
+        """
+        Deprecated, prefer `frames_raw` instead.
+        """
+        yield from self.frames_raw()
 
     def __enter__(self) -> "Capture":
         self._inner.start()
