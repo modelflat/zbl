@@ -1,25 +1,25 @@
 use windows::{
-    core::{Interface, Result},
     Graphics::DirectX::Direct3D11::IDirect3DDevice,
     Win32::{
         Foundation::HMODULE,
         Graphics::{
             Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP},
             Direct3D11::{
+                D3D11_BIND_FLAG, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_CPU_ACCESS_FLAG,
+                D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ,
+                D3D11_MAPPED_SUBRESOURCE, D3D11_RESOURCE_MISC_FLAG, D3D11_RESOURCE_MISC_SHARED,
+                D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
                 D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Resource,
-                ID3D11Texture2D, D3D11_BIND_FLAG, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX,
-                D3D11_CPU_ACCESS_FLAG, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-                D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_RESOURCE_MISC_FLAG,
-                D3D11_RESOURCE_MISC_SHARED, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-                D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
+                ID3D11Texture2D,
             },
             Dxgi::{
                 Common::{DXGI_FORMAT, DXGI_SAMPLE_DESC},
-                IDXGIDevice, DXGI_ERROR_UNSUPPORTED,
+                DXGI_ERROR_UNSUPPORTED, IDXGIDevice,
             },
         },
         System::WinRT::Direct3D11::CreateDirect3D11DeviceFromDXGIDevice,
     },
+    core::{Interface, Result},
 };
 
 fn create_d3d_device() -> Result<ID3D11Device> {

@@ -1,35 +1,35 @@
 use std::{
     collections::HashMap,
     sync::{
-        mpsc::{sync_channel, Receiver, SyncSender},
         RwLock,
+        mpsc::{Receiver, SyncSender, sync_channel},
     },
 };
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::Result,
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
         Foundation::{BOOL, HWND, LPARAM, POINT, RECT},
         Graphics::{
             Direct3D11::D3D11_BOX,
-            Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWM_CLOAKED_SHELL},
+            Dwm::{DWM_CLOAKED_SHELL, DWMWA_CLOAKED, DwmGetWindowAttribute},
             Gdi::ClientToScreen,
         },
         System::{
             Console::GetConsoleWindow, WinRT::Graphics::Capture::IGraphicsCaptureItemInterop,
         },
         UI::{
-            Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK},
+            Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent},
             WindowsAndMessaging::{
-                EnumWindows, GetAncestor, GetClassNameW, GetClientRect, GetShellWindow,
-                GetWindowLongW, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId,
-                IsWindowVisible, EVENT_OBJECT_DESTROY, GA_ROOT, GWL_EXSTYLE, GWL_STYLE,
-                WINEVENT_OUTOFCONTEXT, WS_DISABLED, WS_EX_TOOLWINDOW,
+                EVENT_OBJECT_DESTROY, EnumWindows, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, GetAncestor,
+                GetClassNameW, GetClientRect, GetShellWindow, GetWindowLongW, GetWindowRect,
+                GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible, WINEVENT_OUTOFCONTEXT,
+                WS_DISABLED, WS_EX_TOOLWINDOW,
             },
         },
     },
+    core::Result,
 };
 
 use crate::util::convert_u16_string;

@@ -3,7 +3,7 @@ pub mod d3d;
 pub mod frame;
 pub mod util;
 
-pub use capture::{display::Display, window::Window, Capturable, Capture, CaptureBuilder};
+pub use capture::{Capturable, Capture, CaptureBuilder, display::Display, window::Window};
 pub use frame::Frame;
 
 // re-export winapi
@@ -11,8 +11,8 @@ pub use windows;
 
 use std::sync::LazyLock;
 use windows::Win32::{
-    System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
-    UI::HiDpi::{SetProcessDpiAwareness, PROCESS_PER_MONITOR_DPI_AWARE},
+    System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize},
+    UI::HiDpi::{PROCESS_PER_MONITOR_DPI_AWARE, SetProcessDpiAwareness},
 };
 
 pub fn init() {

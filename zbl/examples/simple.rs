@@ -2,11 +2,11 @@ use std::{os::raw::c_void, time::Instant};
 
 use clap::Parser;
 use opencv::{
-    core::{Mat, Size, CV_8UC4},
+    core::{CV_8UC4, Mat, Size},
     highgui,
 };
 use windows::Win32::Foundation::HWND;
-use zbl::{capture::CaptureBuilder, Capturable, Display, Window};
+use zbl::{Capturable, Display, Window, capture::CaptureBuilder};
 
 #[derive(Parser, Debug)]
 #[clap(version)]

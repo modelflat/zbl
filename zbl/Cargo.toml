@@ -36,6 +36,6 @@ features = [
 clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies.opencv]
-version = "0.95.0"
+version = "0.95.1"
 default-features = false
 features = ["highgui"]

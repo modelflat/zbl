@@ -1,5 +1,5 @@
 use windows::Win32::Graphics::Direct3D11::{
-    ID3D11Texture2D, D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC,
+    D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC, ID3D11Texture2D,
 };
 
 pub struct Frame {

@@ -12,5 +12,5 @@ zbl = { path = "../zbl", default-features = false }
 thiserror = "2"
 
 [dependencies.pyo3]
-version = "0.25"
+version = "0.26"
 features = ["extension-module"]

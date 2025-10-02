@@ -1,14 +1,13 @@
 use std::{
     collections::HashMap,
     sync::{
-        mpsc::{sync_channel, Receiver, SyncSender},
         RwLock,
+        mpsc::{Receiver, SyncSender, sync_channel},
     },
 };
 
 use once_cell::sync::Lazy;
 use windows::{
-    core::{factory, Result},
     Graphics::Capture::GraphicsCaptureItem,
     Win32::{
         Foundation::{BOOL, LPARAM, RECT},
@@ -18,6 +17,7 @@ use windows::{
         },
         System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop,
     },
+    core::{Result, factory},
 };
 
 use crate::util::convert_u16_string;
